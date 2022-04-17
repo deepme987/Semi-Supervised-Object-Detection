@@ -52,7 +52,7 @@ def main():
     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
-    num_epochs = 1
+    num_epochs = 10
 
     for epoch in range(num_epochs):
         # train for one epoch, printing every 10 iterations
@@ -61,6 +61,8 @@ def main():
         lr_scheduler.step()
         # evaluate on the test dataset
         evaluate(model, valid_loader, device=device)
+
+        torch.save(model.state_dict(), f"model-{epoch}.pth")
 
     print("That's it!")
 
