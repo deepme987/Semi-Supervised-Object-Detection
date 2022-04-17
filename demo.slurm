@@ -39,3 +39,4 @@ singularity exec --nv \
 source /ext3/env.sh
 conda activate
 python demo.py
+"
