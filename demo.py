@@ -25,7 +25,8 @@ def get_transform(train):
     return T.Compose(transforms)
 
 def get_model(num_classes):
-    model = torch.hub.load("facebookresearch/swav", "resnet50")
+    # model = torch.hub.load("facebookresearch/swav", "resnet50")
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
 
     # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
