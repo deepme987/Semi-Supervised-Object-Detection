@@ -46,7 +46,7 @@ def main():
         mean += data.mean(2).sum(0)
         std += data.std(2).sum(0)
         nb_samples += batch_samples
-        if nb_samples % 10000 == 0:
+        if nb_samples % 1000 == 0.:
             print(nb_samples,'samples succeeded!')
 
     mean /= nb_samples
