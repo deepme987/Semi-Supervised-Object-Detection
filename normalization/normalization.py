@@ -13,6 +13,10 @@ class UnlabeledDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.image_dir = root
         self.filelist = os.listdir(self.image_dir)
+        problem_img = ['15460.PNG','151438.PNG', '158432.PNG']
+        for p in problem_img:
+            if p in self.filelist:
+                self.filelist.remove(p)
         self.num_images = len(self.filelist)
 
     def __len__(self):
@@ -25,28 +29,25 @@ class UnlabeledDataset(torch.utils.data.Dataset):
                 img = Image.open(f).convert('RGB')
             except OSError:
                 print(self.filelist[idx],'caused error')
-                pass
-
-
         return F.to_tensor(img)
 
 def main():
     #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    unlabeled_data = UnlabeledDataset(root = '/unlabeled', transform = None)
+    unlabeled_data = UnlabeledDataset(root = '../unlabeled', transform = None)
     data_loader = torch.utils.data.DataLoader(unlabeled_data, batch_size=1024,  num_workers=4)
 
     mean = 0.
     std = 0.
     nb_samples = 0.
     for data in data_loader:
-        #data: batch x 3 x 244 x 244// not using the collate fn by prof 
+        #data: batch x 3 x 244 x 244// not using the collate fn by prof
         batch_samples = data.size(0)
         data = data.view(batch_samples, data.size(1), -1)
         mean += data.mean(2).sum(0)
         std += data.std(2).sum(0)
         nb_samples += batch_samples
-        if nb_samples % 1000 == 0.:
+        if nb_samples % 1000 == 0:
             print(nb_samples,'samples succeeded!')
 
     mean /= nb_samples

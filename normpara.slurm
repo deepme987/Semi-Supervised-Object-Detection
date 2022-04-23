@@ -38,5 +38,5 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python norm_para.py
+python normalization/normalization.py
 "
