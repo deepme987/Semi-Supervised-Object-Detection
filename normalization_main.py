@@ -34,7 +34,7 @@ class UnlabeledDataset(torch.utils.data.Dataset):
 def main():
     #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    unlabeled_data = UnlabeledDataset(root = '../unlabeled', transform = None)
+    unlabeled_data = UnlabeledDataset(root = '/unlabeled', transform = None)
     data_loader = torch.utils.data.DataLoader(unlabeled_data, batch_size=1024,  num_workers=4)
 
     mean = 0.
