@@ -17,8 +17,8 @@
 ##SBATCH --cpus-per-task=24
 
 #SBATCH --time=12:00:00
-#SBATCH --output=demo_%j.out
-#SBATCH --error=demo_%j.err
+#SBATCH --output=norm_%j.out
+#SBATCH --error=norm_%j.err
 #SBATCH --exclusive
 #SBATCH --requeue
 

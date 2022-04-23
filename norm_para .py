@@ -21,7 +21,12 @@ class UnlabeledDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # the idx of unlabeled image is not consecutive
         with open(os.path.join(self.image_dir, self.filelist[idx]), 'rb') as f:
-            img = Image.open(f).convert('RGB')
+            try:
+                img = Image.open(f).convert('RGB')
+            except OSError:
+                print(self.filelist[idx],'caused error')
+                pass
+
 
         return F.to_tensor(img)
 
@@ -29,7 +34,7 @@ def main():
     #device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     unlabeled_data = UnlabeledDataset(root = '/unlabeled', transform = None)
-    data_loader = torch.utils.data.DataLoader(unlabeled_data, batch_size=10,  num_workers=2)
+    data_loader = torch.utils.data.DataLoader(unlabeled_data, batch_size=1024,  num_workers=4)
 
     mean = 0.
     std = 0.
@@ -41,12 +46,13 @@ def main():
         mean += data.mean(2).sum(0)
         std += data.std(2).sum(0)
         nb_samples += batch_samples
+        if nb_samples % 10000 == 0:
+            print(nb_samples,'samples succeeded!')
 
     mean /= nb_samples
     std /= nb_samples
+    print('mean: ', mean, 'std: ', std)
 
-
-    torch.save(['mean: ', mean, 'std: ', std],'mean_std.pt')
 
 if __name__ == "__main__":
     main()
