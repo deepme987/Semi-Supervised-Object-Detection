@@ -17,7 +17,7 @@
 ##SBATCH --cpus-per-task=24
 
 
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=swav_%j.out
 #SBATCH --error=swav_%j.err
 #SBATCH --exclusive
@@ -30,6 +30,8 @@ cp -rp /scratch/DL22SP/unlabeled_224.sqsh /tmp
 cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
 
+
+
 singularity exec --nv \
 --bind /scratch \
 --overlay /scratch/DL22SP/conda.ext3:ro \
@@ -40,14 +42,12 @@ singularity exec --nv \
 source /ext3/env.sh
 conda activate
 python main_swav.py \
---data_path '/unlabeled' \
---arch 'resnet18'\
 --workers 2 \
 --epochs 20 \
 --base_lr 0.6 \
 --final_lr 0.0006 \
 --warmup_epochs 0 \
---batch_size 512 \
+--batch_size 32 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
