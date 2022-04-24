@@ -39,7 +39,8 @@ singularity exec --nv \
 source /ext3/env.sh
 conda activate
 python main_swav.py \
---data_path /unlabeled \
+--data_path '/unlabeled' \
+--arch 'resnet18'\
 --workers 2 \
 --epochs 20 \
 --base_lr 0.6 \
