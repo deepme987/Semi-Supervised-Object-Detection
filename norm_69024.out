@@ -1,5 +1,0 @@
-Dataset is copied to /tmp
-128000.0 samples succeeded!
-256000.0 samples succeeded!
-384000.0 samples succeeded!
-mean:  tensor([0.4917, 0.4694, 0.4148]) std:  tensor([0.2278, 0.2240, 0.2280])
