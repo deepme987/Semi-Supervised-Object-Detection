@@ -47,7 +47,7 @@ python main_swav.py \
 --base_lr 0.6 \
 --final_lr 0.0006 \
 --warmup_epochs 0 \
---batch_size 32 \
+--batch_size 256 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
