@@ -16,6 +16,7 @@
 ##SBATCH --gres=gpu:4
 ##SBATCH --cpus-per-task=24
 
+
 #SBATCH --time=12:00:00
 #SBATCH --output=swav_%j.out
 #SBATCH --error=swav_%j.err
