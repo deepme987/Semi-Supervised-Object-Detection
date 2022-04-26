@@ -111,6 +111,7 @@ class IntermediateLayerGetter(nn.ModuleDict):
                 out[out_name] = x
         return out
         
+
 def get_transform(train):
     transforms = []
     transforms.append(T.ToTensor())
@@ -191,15 +192,15 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
     if args.debug:
         for name, param in model.named_parameters():
             if param.requires_grad:
-                print(f'YES: {name}')
+                print(f'TRAIN: {name}')
             else:
-                print(f'NO: {name}')
+                print(f'FROZEN: {name}')
 
         for name, child in model.named_children():
             print(f'name is: {name}')
             print(f'module is: {child}')
         sys.stdout.flush()
-        raise NotImplementedError
+        # raise NotImplementedError
 
     return model
 
@@ -211,11 +212,17 @@ def main():
         os.mkdir(args.checkpoint_path)
     
     num_classes = 100
+    
 
     train_dataset = LabeledDataset(root=args.data_path, split="training", transforms=get_transform(train=True))
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
-
     valid_dataset = LabeledDataset(root=args.data_path, split="validation", transforms=get_transform(train=False))
+    
+    if args.debug:
+        index = list(range(500))
+        train_dataset = torch.utils.data.Subset(train_dataset, index)
+        valid_dataset = torch.utils.data.Subset(valid_dataset, index)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=2, collate_fn=utils.collate_fn)
     
     model = get_model(num_classes, pretrained_hub=args.pretrained_hub)
@@ -229,21 +236,22 @@ def main():
     if args.train:
         for epoch in range(args.epochs):
             # train for one epoch, printing every 10 iterations
-            train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1)
+            train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
 
             # save whole model instead of state_dict
-            if (epoch % args.checkpoint_freq == 0) and (epoch > 0):
-                torch.save(model, args.checkpoint_path)
+            if (epoch % args.checkpoint_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
+                torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
 
             # update the learning rate
             lr_scheduler.step()
 
-            if (epoch % args.eval_freq == 0) and (epoch > 0):
+            if (epoch % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 # evaluate on the test dataset
                 evaluate(model, valid_loader, device=device)
 
     # final eval
-    evaluate(model, valid_loader, device=device)
+    if (args.eval_freq % args.epochs != 0):
+        evaluate(model, valid_loader, device=device)
 
 if __name__ == "__main__":
     main()
