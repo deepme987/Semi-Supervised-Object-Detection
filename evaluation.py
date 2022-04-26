@@ -18,29 +18,29 @@ from collections import OrderedDict
 from dataset import UnlabeledDataset, LabeledDataset
 
 # Rebuilt SwAV as the default model doesn't like to run correctly
-class SwAV(nn.Module):
-    def __init__(self):
-        super(SwAV, self).__init__()
-        self.model = torch.hub.load("facebookresearch/swav:main", "resnet50")
-        self.model.avgpool = nn.Identity()
-        self.model.fc = nn.Identity()
+# class SwAV(nn.Module):
+#     def __init__(self):
+#         super(SwAV, self).__init__()
+#         self.model = torch.hub.load("facebookresearch/swav:main", "resnet50")
+#         self.model.avgpool = nn.Identity()
+#         self.model.fc = nn.Identity()
         
     
-    def forward(self, x):
-        res = OrderedDict()
-        x = self.model.conv1(x)
-        x = self.model.bn1(x)
-        x = self.model.relu(x)
-        x = self.model.maxpool(x)
-        x = self.model.layer1(x)
-        res["0"] = x
-        x = self.model.layer2(x)
-        res["1"] = x
-        x = self.model.layer3(x)
-        res["2"] = x
-        x = self.model.layer4(x)
-        res["3"] = x
-        return res
+#     def forward(self, x):
+#         res = OrderedDict()
+#         x = self.model.conv1(x)
+#         x = self.model.bn1(x)
+#         x = self.model.relu(x)
+#         x = self.model.maxpool(x)
+#         x = self.model.layer1(x)
+#         res["0"] = x
+#         x = self.model.layer2(x)
+#         res["1"] = x
+#         x = self.model.layer3(x)
+#         res["2"] = x
+#         x = self.model.layer4(x)
+#         res["3"] = x
+#         return res
 
 def get_transform(train):
     transforms = []
