@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 import datetime
 import pickle
 import time
+import pandas as pd
 
 import torch
 import torch.distributed as dist
@@ -322,3 +323,36 @@ def init_distributed_mode(args):
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
+
+class PD_Stats(object):
+    """
+    Log stuff with pandas library
+    """
+
+    def __init__(self, path, columns):
+        self.path = path
+        self.columns = columns
+
+        # reload path stats
+        if os.path.isfile(self.path):
+            self.stats = pd.read_pickle(self.path)
+
+            # check that columns are the same
+            assert list(self.stats.columns) == list(columns)
+
+        else:
+            self.stats = pd.DataFrame(columns=columns)
+
+    def _update(self, row, save=True):
+        self.stats.loc[len(self.stats.index)] = row
+
+        # save the statistics
+        if save:
+            self.stats.to_pickle(self.path)
+    
+    def update(self, log, save=True):
+        res = []
+        for k, v in log.meters.items():
+            res.append(v.median)
+        self._update(res, save=save)
+            

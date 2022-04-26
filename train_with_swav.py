@@ -39,15 +39,16 @@ parser.add_argument("--nmb_prototypes", default=3000, type=int,
 #############################
 #### training parameters ####
 #############################
-parser.add_argument("--train", default=True, type=bool,
-                    help="Train or eval")
+parser.add_argument("--mode", choices=['train', 'eval', 'resume'], 
+                    default='train', type=str, help="Choose action.") #TODO: add resume impl
 parser.add_argument("--epochs", default=30, type=int,
                     help="number of total epochs to run")
 parser.add_argument("--eval_freq", default=5, type=int,
                     help="Eval the model periodically")
 parser.add_argument("--checkpoint_freq", type=int, default=3,
                     help="Save the model periodically")
-
+parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
+                    default='resnet50', type=str, help="Architecture")
 ##########################
 #### other parameters ####
 ##########################
@@ -145,8 +146,8 @@ def load_pretrained_swav(ckp_path):
     return model
 
 def get_model(num_classes, pretrained_hub, returned_layers=None):
-    if not args.train:
-        model = torch.load(torch.load(os.path.join(args.checkpoint_path, args.checkpoint_file)))
+    if args.mode == 'eval':
+        model = torch.load(os.path.join(args.checkpoint_path, args.checkpoint_file))
         model.eval()
         return model
 
@@ -210,15 +211,26 @@ def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     if not os.path.isdir(args.checkpoint_path):
         os.mkdir(args.checkpoint_path)
+
+    pd_stat_header = {
+        "Epoch", "loss", "loss_classifier", 
+        "loss_box_reg", "loss_objectness",
+        "loss_rpn_box_reg"
+    }
+
+    training_stats = utils.PD_Stats(
+        os.path.join(args.checkpoint_path, "stats.pkl"), 
+        pd_stat_header,
+    )
+
     
     num_classes = 100
     
-
     train_dataset = LabeledDataset(root=args.data_path, split="training", transforms=get_transform(train=True))
     valid_dataset = LabeledDataset(root=args.data_path, split="validation", transforms=get_transform(train=False))
     
     if args.debug:
-        index = list(range(500))
+        index = list(range(100))
         train_dataset = torch.utils.data.Subset(train_dataset, index)
         valid_dataset = torch.utils.data.Subset(valid_dataset, index)
 
@@ -233,11 +245,13 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
     
-    if args.train:
+    if (args.mode == "train") or (args.mode == "resume"):
         for epoch in range(args.epochs):
             # train for one epoch, printing every 10 iterations
-            train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
-
+            log = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
+            
+            training_stats.update(log)
+            
             # save whole model instead of state_dict
             if (epoch % args.checkpoint_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
