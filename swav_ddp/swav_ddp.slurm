@@ -11,7 +11,7 @@
 #SBATCH --partition=n1s16-v100-2
 #SBATCH --gres=gpu:2
 #SBATCH --tasks-per-node=2
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=8
 
 
 ##SBATCH --partition=n1c24m128-v100-4
@@ -33,6 +33,8 @@ cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
 echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
+master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_ADDR=$master_addr
 
 singularity exec --nv \
 --bind /scratch \
