@@ -16,6 +16,7 @@ import torch
 from .logger import create_logger, PD_Stats
 
 import torch.distributed as dist
+from datetime import timedelta
 
 FALSY_STRINGS = {"off", "false", "0"}
 TRUTHY_STRINGS = {"on", "true", "1"}
@@ -69,6 +70,7 @@ def init_distributed_mode(args):
         init_method=args.dist_url,
         world_size=args.world_size,
         rank=args.rank,
+        timeout = timedelta(seconds = 120)
     )
 
     # set cuda device
