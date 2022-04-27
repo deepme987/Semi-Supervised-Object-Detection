@@ -33,7 +33,8 @@ cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
 echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
-
+export MASTER_ADDR=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
+export MASTER_PORT=19500
 
 master_node=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
 dist_url="tcp://"
@@ -64,5 +65,5 @@ python swav_ddp.py \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
 --sync_bn pytorch \
---dist_url $dist_url 
+--dist_url $dist_url
 "
