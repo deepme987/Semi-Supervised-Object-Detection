@@ -101,7 +101,7 @@ parser.add_argument("--local_rank", default=0, type=int,
 #########################
 #### other parameters ###
 #########################
-parser.add_argument("--arch", default="resnet50", type=str, help="convnet architecture")
+parser.add_argument("--arch", default="resnet18", type=str, help="convnet architecture")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--workers", default=10, type=int,
@@ -110,7 +110,7 @@ parser.add_argument("--checkpoint_freq", type=int, default=25,
                     help="Save the model periodically")
 parser.add_argument("--use_fp16", type=bool_flag, default=True,
                     help="whether to train with mixed precision or not")
-parser.add_argument("--syncbn_process_group_size", type=int, default=8, help=""" see
+parser.add_argument("--syncbn_process_group_size", type=int, default=2, help=""" see
                     https://github.com/NVIDIA/apex/blob/master/apex/parallel/__init__.py#L58-L67""")
 parser.add_argument("--dump_path", type=str, default=".",
                     help="experiment dump path for checkpoints and log")

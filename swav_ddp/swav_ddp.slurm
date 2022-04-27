@@ -10,8 +10,10 @@
 
 ##SBATCH --partition=n1s16-v100-2
 ##SBATCH --gres=gpu:2
-##SBATCH --cpus-per-task=16
 ##SBATCH --ntasks=2
+##SBATCH --tasks-per-node=2
+##SBATCH --cpus-per-task=16
+
 
 ##SBATCH --partition=n1c24m128-v100-4
 ##SBATCH --gres=gpu:4
@@ -54,8 +56,8 @@ python swav_ddp.py \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --use_fp16 true \
---freeze_prototypes_niters 5005 \
---queue_length 3840 \
-
+--freeze_prototypes_niters 313 \
+--queue_length 0 \
+--sync_bn apex\
 
 "
