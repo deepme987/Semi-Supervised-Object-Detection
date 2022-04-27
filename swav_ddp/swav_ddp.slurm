@@ -33,8 +33,12 @@ cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
 echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
-master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
-export MASTER_ADDR=$master_addr
+
+
+master_node=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
+dist_url="tcp://"
+dist_url+=$master_node
+dist_url+=:40000
 
 singularity exec --nv \
 --bind /scratch \
