@@ -56,8 +56,7 @@ python swav_ddp.py \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --use_fp16 true \
---freeze_prototypes_niters 313 \
---queue_length 0 \
---sync_bn apex\
-
+--freeze_prototypes_niters 5005 \
+--queue_length 3840 \
+--sync_bn pytorch
 "
