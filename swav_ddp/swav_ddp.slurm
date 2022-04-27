@@ -63,5 +63,6 @@ python swav_ddp.py \
 --use_fp16 true \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
---sync_bn pytorch
+--sync_bn pytorch \
+--dist_url $dist_url 
 "
