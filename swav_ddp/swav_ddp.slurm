@@ -29,7 +29,7 @@ export SINGULARITY_CACHEDIR=/tmp/$USER
 cp -rp /scratch/DL22SP/unlabeled_224.sqsh /tmp
 cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
-
+echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
 
 singularity exec --nv \
@@ -41,7 +41,7 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python -m swav_ddp.py \
+python swav_ddp.py \
 --workers 2 \
 --epochs 20 \
 --base_lr 1 \

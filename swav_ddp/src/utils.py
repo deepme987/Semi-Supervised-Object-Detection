@@ -73,10 +73,12 @@ def init_distributed_mode(args):
         rank=args.rank,
         timeout = timedelta(seconds = 120)
     )
+    print('ini success')
 
     # set cuda device
     args.gpu_to_work_on = args.rank % torch.cuda.device_count()
     torch.cuda.set_device(args.gpu_to_work_on)
+    print ('args.gpu_to_work_on', args.gpu_to_work_on)
     return
 
 
