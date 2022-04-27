@@ -336,10 +336,12 @@ class PD_Stats(object):
         # reload path stats
         if os.path.isfile(self.path):
             self.stats = pd.read_pickle(self.path)
-
+            if list(self.stats.columns) != list(columns):
+                print(self.stats.columns)
+                print(list(columns))
             # check that columns are the same
             assert list(self.stats.columns) == list(columns)
-
+            
         else:
             self.stats = pd.DataFrame(columns=columns)
 

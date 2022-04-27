@@ -17,7 +17,7 @@ import sys
 from engine import train_one_epoch, evaluate
 from dataset import UnlabeledDataset, LabeledDataset
 from typing import Dict
-
+from torchvision.models.detection.transform import GeneralizedRCNNTransform
 # TODO: Might need to be modified depends on the structure of our project files
 import swav_simplified.src.resnet50 as resnet_models
 
@@ -116,6 +116,7 @@ class IntermediateLayerGetter(nn.ModuleDict):
 def get_transform(train):
     transforms = []
     transforms.append(T.ToTensor())
+    # transforms.append(T.Normalize(mean=[0.4917, 0.4694, 0.4148], std=[0.2278, 0.2240, 0.2280]))
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
@@ -152,7 +153,8 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
         return model
 
     if pretrained_hub:
-        backbone = torch.hub.load("facebookresearch/swav", "resnet50")
+        # backbone = torch.hub.load("facebookresearch/swav", "resnet50")
+        backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
         print("Load pretrained swav backbone from Facebook hub")
     else:
         if not os.path.isdir(args.swav_path):
@@ -183,6 +185,12 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
 
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
 
+    # Normalize layer based on labeled dataset
+    min_size, max_size = 800, 1333
+    image_mean, image_std = [0.4697, 0.4517, 0.3954], [0.2305, 0.2258, 0.2261]
+    norm_layer = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
+    
+    model.transform = norm_layer
     model.backbone.body = new_back_bone
 
     # get number of input features for the classifier
@@ -251,7 +259,7 @@ def main():
             log = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
             
             training_stats.update(log)
-            
+
             # save whole model instead of state_dict
             if (epoch % args.checkpoint_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
