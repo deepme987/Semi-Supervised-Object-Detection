@@ -21,7 +21,7 @@ from dataset import UnlabeledDataset, LabeledDataset
 class SwAV(nn.Module):
     def __init__(self):
         super(SwAV, self).__init__()
-        self.model = torch.hub.load("facebookresearch/swav:main", "resnet50")
+        self.model = torch.hub.load("facebookresearch/swav_ddp:main", "resnet50")
         self.model.avgpool = nn.Identity()
         self.model.fc = nn.Identity()
         
@@ -50,7 +50,7 @@ def get_transform(train):
     return T.Compose(transforms)
 
 def get_model(num_classes, swav=False):
-    # model = torch.hub.load("facebookresearch/swav", "resnet50")
+    # model = torch.hub.load("facebookresearch/swav_ddp", "resnet50")
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
     if swav:
         model.backbone.body = SwAV()
