@@ -13,14 +13,12 @@ import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import transforms as T
 import utils
-import sys
 from engine import train_one_epoch, evaluate
 from dataset import UnlabeledDataset, LabeledDataset
 from typing import Dict
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
 # TODO: Might need to be modified depends on the structure of our project files
 import swav_simplified.src.resnet50 as resnet_models
-import pickle
 
 parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with labeled dataset")
 #########################
@@ -192,8 +190,8 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
 
     # Use backbone
 
-    model.backbone.body.load_state_dict(new_back_bone.state_dict())
-    # model.backbone.body = new_back_bone
+    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
+    model.backbone.body = new_back_bone
 
     # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
@@ -336,7 +334,7 @@ def main():
 
             if (epoch % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 # evaluate on the test dataset
-                coco_res, _ =evaluate(model, valid_loader, device=device)
+                coco_res, _ = evaluate(model, valid_loader, device=device)
                 eval_result[epoch] = coco_res.coco_eval
     # final eval
     # if (args.eval_freq % args.epochs != 0):
