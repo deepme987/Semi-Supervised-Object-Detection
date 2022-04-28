@@ -128,7 +128,11 @@ def main():
     args = parser.parse_args()
     # init_distributed_mode(args)
     fix_random_seeds(args.seed)
+
     print(os.environ)
+    # single node multi GPU also need these 2 params
+    args.rank = int(os.environ["RANK"])
+    args.world_size = int(os.environ["WORLD_SIZE"])
 
     logger, training_stats = initialize_exp(args, "epoch", "loss")
     assert torch.cuda.is_available()
@@ -137,9 +141,7 @@ def main():
     for i in range(device_count):
         logger.info("Device #{}: {}".format(i, torch.cuda.get_device_name(i)))
 
-    # single node multi GPU also need these 2 params
-    args.rank = int(os.environ["RANK"])
-    args.world_size = int(os.environ["WORLD_SIZE"])
+
 
 
 
