@@ -16,6 +16,9 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
 
+    loss_iter = []
+    smooth_loss_hist = []
+
     lr_scheduler = None
     if epoch == 0:
         warmup_factor = 1. / 1000
@@ -30,11 +33,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         loss_dict = model(images, targets)
 
         losses = sum(loss for loss in loss_dict.values())
-
+        
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-
         loss_value = losses_reduced.item()
 
         if not math.isfinite(loss_value):
@@ -48,11 +50,16 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
 
         if lr_scheduler is not None:
             lr_scheduler.step()
-
+        
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
-    return metric_logger
+        loss_iter.append(loss_value)
+        if len(loss_iter) >= 2:
+            smooth_loss_hist.append(sum(loss_iter) / float(len(loss_iter)))
+            loss_iter = []
+
+    return metric_logger, smooth_loss_hist
 
 
 def _get_iou_types(model):
