@@ -344,7 +344,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 
         # ============ backward and optim step ... ============
         optimizer.zero_grad()
-
+        print(it)
         loss.backward()
         # cancel gradients for the prototypes
         if iteration < args.freeze_prototypes_niters:
