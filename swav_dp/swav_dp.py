@@ -131,7 +131,7 @@ def main():
     # init_distributed_mode(args)
     fix_random_seeds(args.seed)
 
-    print(os.environ)
+    # print(os.environ)
     # single node multi GPU also need these 2 params
     args.rank = int(os.environ["RANK"])
     args.world_size = int(os.environ["WORLD_SIZE"])

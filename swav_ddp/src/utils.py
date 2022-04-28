@@ -71,7 +71,7 @@ def init_distributed_mode(args):
         init_method=args.dist_url,
         world_size=args.world_size,
         rank=args.rank,
-        timeout = timedelta(seconds = 120)
+        timeout = timedelta(seconds = 600)
     )
     print('ini success')
 
