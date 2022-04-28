@@ -12,7 +12,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --tasks-per-node=2
 #SBATCH --cpus-per-task=8
-#SBATCH --mem-per-gpu=4G
+
 
 ##SBATCH --partition=n1c24m128-v100-4
 ##SBATCH --gres=gpu:4
@@ -50,7 +50,7 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --base_lr 1 \
 --final_lr 0.001 \
 --warmup_epochs 0 \
---batch_size 128 \
+--batch_size 64 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
