@@ -337,7 +337,7 @@ class PD_Stats(object):
         if os.path.isfile(self.path):
             self.stats = pd.read_pickle(self.path)
             if list(self.stats.columns) != list(columns):
-                print(self.stats.columns)
+                print(list(self.stats.columns))
                 print(list(columns))
             # check that columns are the same
             assert list(self.stats.columns) == list(columns)
@@ -357,4 +357,6 @@ class PD_Stats(object):
         for k, v in log.meters.items():
             res.append(v.median)
         self._update(res, save=save)
-            
+
+
+

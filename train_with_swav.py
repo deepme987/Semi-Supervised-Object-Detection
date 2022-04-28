@@ -20,6 +20,7 @@ from typing import Dict
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
 # TODO: Might need to be modified depends on the structure of our project files
 import swav_simplified.src.resnet50 as resnet_models
+import time
 
 parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with labeled dataset")
 #########################
@@ -116,7 +117,6 @@ class IntermediateLayerGetter(nn.ModuleDict):
 def get_transform(train):
     transforms = []
     transforms.append(T.ToTensor())
-    # transforms.append(T.Normalize(mean=[0.4917, 0.4694, 0.4148], std=[0.2278, 0.2240, 0.2280]))
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
@@ -146,6 +146,7 @@ def load_pretrained_swav(ckp_path):
         print("No pretrained weights found => training from random weights")
     return model
 
+
 def get_model(num_classes, pretrained_hub, returned_layers=None):
     if args.mode == 'eval':
         model = torch.load(os.path.join(args.checkpoint_path, args.checkpoint_file))
@@ -153,8 +154,8 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
         return model
 
     if pretrained_hub:
-        # backbone = torch.hub.load("facebookresearch/swav", "resnet50")
-        backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
+        backbone = torch.hub.load("facebookresearch/swav", "resnet50")
+        # backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
         print("Load pretrained swav backbone from Facebook hub")
     else:
         if not os.path.isdir(args.swav_path):
@@ -168,7 +169,6 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
     backbone.avgpool = nn.Identity()
     backbone.fc = nn.Identity()
 
-
     # --------------------Map resnet backbone---------------------
     # TODO: only for resnet50
     if returned_layers is None:
@@ -178,39 +178,46 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
     return_layers = {f"layer{k}": str(v) for v, k in enumerate(returned_layers)}
 
     new_back_bone = IntermediateLayerGetter(backbone, return_layers=return_layers)
-    for param in new_back_bone.parameters():
-        param.requires_grad = False
+
 
     # --------------------standard demo thing---------------------
 
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
 
-    # Normalize layer based on labeled dataset
+    # Add normalize layer based on labeled dataset
     min_size, max_size = 800, 1333
     image_mean, image_std = [0.4697, 0.4517, 0.3954], [0.2305, 0.2258, 0.2261]
     norm_layer = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
-    
     model.transform = norm_layer
+
+    # Use backbone
+
+    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
     model.backbone.body = new_back_bone
 
     # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
+
     # replace the pre-trained head with a new one
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    # model.roi_heads.box_predictor.cls_score = nn.Linear(in_features=in_features, out_features=num_classes)
+    # model.roi_heads.box_predictor.bbox_pred = nn.Linear(in_features=in_features, out_features=num_classes * 4)
 
-    if args.debug:
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(f'TRAIN: {name}')
-            else:
-                print(f'FROZEN: {name}')
 
-        for name, child in model.named_children():
-            print(f'name is: {name}')
-            print(f'module is: {child}')
-        sys.stdout.flush()
-        # raise NotImplementedError
+    # if args.debug:
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(f'TRAIN: {name}')
+        #     else:
+        #         print(f'FROZEN: {name}')
 
+        # for name, child in model.named_children():
+        #     print(f'name is: {name}')
+        #     print(f'module is: {child}')
+        # print(model.backbone.body.bn1.state_dict())
+        # print("DONE")
+        # sys.stdout.flush()
+        # time.sleep(3)
     return model
 
 def main():
@@ -220,20 +227,20 @@ def main():
     if not os.path.isdir(args.checkpoint_path):
         os.mkdir(args.checkpoint_path)
 
-    pd_stat_header = {
+    pd_train_header = [
         "Epoch", "loss", "loss_classifier", 
         "loss_box_reg", "loss_objectness",
-        "loss_rpn_box_reg"
-    }
+        "loss_rpn_box_reg",
+    ]
 
     training_stats = utils.PD_Stats(
-        os.path.join(args.checkpoint_path, "stats.pkl"), 
-        pd_stat_header,
+        os.path.join(args.checkpoint_path, "train_stats.pkl"), 
+        pd_train_header,
     )
+
 
     
     num_classes = 100
-    
     train_dataset = LabeledDataset(root=args.data_path, split="training", transforms=get_transform(train=True))
     valid_dataset = LabeledDataset(root=args.data_path, split="validation", transforms=get_transform(train=False))
     
@@ -248,17 +255,60 @@ def main():
     model = get_model(num_classes, pretrained_hub=args.pretrained_hub)
     model.to(device)
 
-    params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    low_lr_param = []
+    low_name = []
+    high_lr_param = []
+    high_name = []
+    for name, param in model.named_parameters():
+        if "backbone.body" in name:
+            if "bn" in name:
+                high_lr_param.append(param)
+                high_name.append(name)
+            else:
+                low_lr_param.append(param)
+                low_name.append(name)
+        else:
+            high_lr_param.append(param)
+            high_name.append(name)
+
+    # for module in model.modules():
+    #     if isinstance(module, nn.BatchNorm2d):
+    #         # module.weight.data.fill_(1)
+    #         # module.bias.data.zero_()
+    #         module.running_var.fill_(1)
+    #         module.running_mean.zero_()
+    # time.sleep(3)
+    # print(low_name)
+    # time.sleep(3)
+    # print("--------------")
+    # print(high_name)
+    # print("DONE")
+    # sys.stdout.flush()
+    # time.sleep(3)
+    # raise NotImplementedError
+
+
+    # params = [p for p in model.parameters() if p.requires_grad]
+    # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.SGD(
+         [
+            {"params": high_lr_param},
+            {"params": low_lr_param, "lr": 0.0001} 
+         ],
+         lr=0.005,
+         momentum=0.9,
+         weight_decay=0.0005
+    )
+
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
     
     if (args.mode == "train") or (args.mode == "resume"):
         for epoch in range(args.epochs):
             # train for one epoch, printing every 10 iterations
-            log = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
+            train_log = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
             
-            training_stats.update(log)
+            training_stats.update(train_log)
 
             # save whole model instead of state_dict
             if (epoch % args.checkpoint_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
@@ -270,10 +320,8 @@ def main():
             if (epoch % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 # evaluate on the test dataset
                 evaluate(model, valid_loader, device=device)
-
     # final eval
-    if (args.eval_freq % args.epochs != 0):
-        evaluate(model, valid_loader, device=device)
-
+    # if (args.eval_freq % args.epochs != 0):
+    evaluate(model, valid_loader, device=device)
 if __name__ == "__main__":
     main()
