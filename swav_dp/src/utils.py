@@ -82,7 +82,7 @@ def initialize_exp(params, *args, dump_params=True):
 
     # dump parameters
     if dump_params:
-        pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb"))
+        pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb+"))
 
     # create repo to store checkpoints
     params.dump_checkpoints = os.path.join(params.dump_path, "checkpoints")
