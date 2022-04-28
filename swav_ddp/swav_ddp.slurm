@@ -53,7 +53,7 @@ conda activate
 python swav_ddp.py \
 --workers 2 \
 --epochs 20 \
---base_lr 1 \
+--base_lr 0.3 \
 --final_lr 0.001 \
 --warmup_epochs 0 \
 --batch_size 128 \
