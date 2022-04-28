@@ -29,7 +29,7 @@ from src.utils import (
     init_distributed_mode,
 )
 from src.multicropdataset import MultiCropDataset
-import src.resnet_models as resnet_models
+import src.resnet50 as resnet_models
 
 logger = getLogger()
 
@@ -50,7 +50,7 @@ parser.add_argument("--max_scale_crops", type=float, default=[1], nargs="+",
                     help="argument in RandomResizedCrop (example: [1., 0.14])")
 
 #########################
-## swav_ddp specific params #
+## swav_dp specific params #
 #########################
 parser.add_argument("--crops_for_assign", type=int, nargs="+", default=[0, 1],
                     help="list of crops id used for computing assignments")
@@ -80,7 +80,7 @@ parser.add_argument("--base_lr", default=4.8, type=float, help="base learning ra
 parser.add_argument("--final_lr", type=float, default=0, help="final learning rate")
 parser.add_argument("--freeze_prototypes_niters", default=313, type=int,
                     help="freeze the prototypes during this many iterations from the start")
-parser.add_argument("--wd", default=1e-6, type=float, help="weight decay")
+parser.add_argument("--wd", default=1e-4, type=float, help="weight decay")
 parser.add_argument("--warmup_epochs", default=10, type=int, help="number of warmup epochs")
 parser.add_argument("--start_warmup", default=0, type=float,
                     help="initial warmup learning rate")
@@ -104,35 +104,43 @@ parser.add_argument("--local_rank", default=0, type=int,
 parser.add_argument("--arch", default="resnet18", type=str, help="convnet architecture")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
-parser.add_argument("--workers", default=10, type=int,
+parser.add_argument("--workers", default=2, type=int,
                     help="number of data loading workers")
 parser.add_argument("--checkpoint_freq", type=int, default=25,
                     help="Save the model periodically")
-parser.add_argument("--use_fp16", type=bool_flag, default=True,
+parser.add_argument("--use_fp16", type=bool_flag, default=False,
                     help="whether to train with mixed precision or not")
 parser.add_argument("--syncbn_process_group_size", type=int, default=2, help=""" see
                     https://github.com/NVIDIA/apex/blob/master/apex/parallel/__init__.py#L58-L67""")
-parser.add_argument("--dump_path", type=str, default=".",
+parser.add_argument("--dump_path", type=str, default="/experiments",
                     help="experiment dump path for checkpoints and log")
 parser.add_argument("--seed", type=int, default=31, help="seed")
+
+
+# in order to access the self-defined prototypes etc. attributes
+class MyDataParallel(nn.DataParallel):
+    def __getattr__(self, name):
+        return getattr(self.module, name)
 
 
 def main():
     global args
     args = parser.parse_args()
+    # init_distributed_mode(args)
     fix_random_seeds(args.seed)
     logger, training_stats = initialize_exp(args, "epoch", "loss")
 
     assert torch.cuda.is_available()
-
     device_count = torch.cuda.device_count()
-
     logger.info("Using {} GPUs.".format(device_count))
     for i in range(device_count):
         logger.info("Device #{}: {}".format(i, torch.cuda.get_device_name(i)))
 
-    # args.batch_size is the batch size PER GPU
-    # args.batch_size = args.batch_size * device_count
+    # single node multi GPU also need these 2 params
+    print(os.environ)
+    args.rank = int(os.environ["RANK"])
+    args.world_size = int(os.environ["WORLD_SIZE"])
+
 
     # build data
     train_dataset = MultiCropDataset(
@@ -159,13 +167,13 @@ def main():
         output_dim=args.feat_dim,
         nmb_prototypes=args.nmb_prototypes,
     )
+    # copy model to GPU
     model = model.cuda()
-
+    # data parallel
     if device_count > 1:
-        model = torch.nn.DataParallel(model)
-
-    logger.info(model)
-
+        model = MyDataParallel(model)
+    if args.rank == 0:
+        logger.info(model)
     logger.info("Building model done.")
 
     # build optimizer
@@ -175,7 +183,6 @@ def main():
         momentum=0.9,
         weight_decay=args.wd,
     )
-
     warmup_lr_schedule = np.linspace(args.start_warmup, args.base_lr, len(train_loader) * args.warmup_epochs)
     iters = np.arange(len(train_loader) * (args.epochs - args.warmup_epochs))
     cosine_lr_schedule = np.array([args.final_lr + 0.5 * (args.base_lr - args.final_lr) * (1 + \
@@ -203,10 +210,12 @@ def main():
 
     # build the queue
     queue = None
-    queue_path = os.path.join(args.dump_path, "queue.pth")
+    # each device one queue
+    queue_path = os.path.join(args.dump_path, "queue" + str(args.rank) + ".pth")
     if os.path.isfile(queue_path):
         queue = torch.load(queue_path)["queue"]
     # the queue needs to be divisible by the batch size
+    # for dp, real batch size for all devices = the args.batchsize(the one put in dataloader)
     args.queue_length -= args.queue_length % (args.batch_size)
 
     cudnn.benchmark = True
@@ -223,7 +232,8 @@ def main():
         if args.queue_length > 0 and epoch >= args.epoch_queue_starts and queue is None:
             queue = torch.zeros(
                 len(args.crops_for_assign),
-                args.queue_length,
+                # 需要去worldsize吗 每个proc里的queue
+                args.queue_length // args.world_size,
                 args.feat_dim,
             ).cuda()
 
@@ -232,29 +242,29 @@ def main():
         training_stats.update(scores)
 
         # save checkpoints
-
-        if device_count > 1:
+        if args.rank == 0:
+            if device_count > 1:
                 save_dict = {
-                "epoch": epoch + 1,
-                "state_dict": model.module.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
-        else:
-            save_dict = {
-                "epoch": epoch + 1,
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
+                    "epoch": epoch + 1,
+                    "state_dict": model.module.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                }
+            else:
+                save_dict = {
+                    "epoch": epoch + 1,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                }
 
-        torch.save(
-            save_dict,
-            os.path.join(args.dump_path, "checkpoint.pth.tar"),
-        )
-        if epoch % args.checkpoint_freq == 0 or epoch == args.epochs - 1:
-            shutil.copyfile(
+            torch.save(
+                save_dict,
                 os.path.join(args.dump_path, "checkpoint.pth.tar"),
-                os.path.join(args.dump_checkpoints, "ckp-" + str(epoch) + ".pth"),
             )
+            if epoch % args.checkpoint_freq == 0 or epoch == args.epochs - 1:
+                shutil.copyfile(
+                    os.path.join(args.dump_path, "checkpoint.pth.tar"),
+                    os.path.join(args.dump_checkpoints, "ckp-" + str(epoch) + ".pth"),
+                )
         if queue is not None:
             torch.save({"queue": queue}, queue_path)
 
@@ -269,7 +279,6 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 
     end = time.time()
     for it, inputs in enumerate(train_loader):
-
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -280,11 +289,11 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 
         # normalize the prototypes
         with torch.no_grad():
-            # w = model.module.prototypes.weight.data.clone()
-            w = model.prototypes.weight.data.clone()
+            w = model.module.prototypes.weight.data.clone()
+            # w = model.prototypes.weight.data.clone()
             w = nn.functional.normalize(w, dim=1, p=2)
-            # model.module.prototypes.weight.copy_(w)
-            model.prototypes.weight.copy_(w)
+            model.module.prototypes.weight.copy_(w)
+            #model.prototypes.weight.copy_(w)
 
         # ============ multi-res forward passes ... ============
         embedding, output = model(inputs)
@@ -326,7 +335,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
         loss.backward()
         # cancel gradients for the prototypes
         if iteration < args.freeze_prototypes_niters:
-            for name, p in model.named_parameters():
+            for name, p in model.module.named_parameters():
                 if "prototypes" in name:
                     p.grad = None
         optimizer.step()
@@ -335,7 +344,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
         losses.update(loss.item(), inputs[0].size(0))
         batch_time.update(time.time() - end)
         end = time.time()
-        if it % 50 == 0:
+        if args.rank ==0 and it % 50 == 0:
             logger.info(
                 "Epoch: [{0}][{1}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"

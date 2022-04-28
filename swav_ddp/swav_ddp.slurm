@@ -13,7 +13,6 @@
 #SBATCH --tasks-per-node=2
 #SBATCH --cpus-per-task=8
 
-
 ##SBATCH --partition=n1c24m128-v100-4
 ##SBATCH --gres=gpu:4
 ##SBATCH --cpus-per-task=24

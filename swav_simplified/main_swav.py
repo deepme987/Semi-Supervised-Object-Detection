@@ -28,6 +28,7 @@ from src.utils import (
     AverageMeter,
     init_distributed_mode,
 )
+
 from src.multicropdataset import MultiCropDataset
 from src.resnet50 import *
 
@@ -188,6 +189,7 @@ def main():
     if os.path.isfile(queue_path):
         queue = torch.load(queue_path)["queue"]
     # the queue needs to be divisible by the batch size
+    # ddp每次实际全部机器的batch size = arg.batchsize(用来放进dataloader的size) * nnode * tasks per node
     args.queue_length -= args.queue_length % (args.batch_size * args.world_size)
 
     cudnn.benchmark = True

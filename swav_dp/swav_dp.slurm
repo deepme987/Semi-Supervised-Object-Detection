@@ -4,13 +4,14 @@
 #SBATCH --account=csci_ga_2572_2022sp_01
 
 ## change the partition number to use different number of GPUs
-#SBATCH --partition=n1s8-v100-1
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
+##SBATCH --partition=n1s8-v100-1
+##SBATCH --gres=gpu:1
+##SBATCH --cpus-per-task=8
 
-##SBATCH --partition=n1s16-v100-2
-##SBATCH --gres=gpu:2
-##SBATCH --cpus-per-task=16
+#SBATCH --partition=n1s16-v100-2
+#SBATCH --gres=gpu:2
+#SBATCH --tasks-per-node=2
+#SBATCH --cpus-per-task=8
 
 ##SBATCH --partition=n1c24m128-v100-4
 ##SBATCH --gres=gpu:4
@@ -18,8 +19,8 @@
 
 
 #SBATCH --time=24:00:00
-#SBATCH --output=swav_%j.out
-#SBATCH --error=swav_%j.err
+#SBATCH --output=swavdp_%j.out
+#SBATCH --error=swavdp_%j.err
 #SBATCH --exclusive
 #SBATCH --requeue
 
@@ -41,9 +42,9 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python -m torch.distributed.launch --nproc_per_node=2 main_swav.py \
+python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --workers 2 \
---epochs 20 \
+--epochs 15 \
 --base_lr 1 \
 --final_lr 0.001 \
 --warmup_epochs 0 \
@@ -52,7 +53,6 @@ python -m torch.distributed.launch --nproc_per_node=2 main_swav.py \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
---use_fp16 true \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
 --epoch_queue_starts 15
