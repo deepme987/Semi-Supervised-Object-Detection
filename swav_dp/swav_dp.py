@@ -130,6 +130,7 @@ def main():
     fix_random_seeds(args.seed)
     print(os.environ)
 
+    logger, training_stats = initialize_exp(args, "epoch", "loss")
     assert torch.cuda.is_available()
     device_count = torch.cuda.device_count()
     logger.info("Using {} GPUs.".format(device_count))
@@ -140,7 +141,7 @@ def main():
     args.rank = int(os.environ["RANK"])
     args.world_size = int(os.environ["WORLD_SIZE"])
 
-    logger, training_stats = initialize_exp(args, "epoch", "loss")
+
 
     # build data
     train_dataset = MultiCropDataset(
