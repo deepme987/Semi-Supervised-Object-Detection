@@ -91,7 +91,7 @@ parser.add_argument("--local_rank", default=0, type=int,
 def main():
     global args, best_acc
     args = parser.parse_args()
-    init_distributed_mode(args)
+    #init_distributed_mode(args)
     fix_random_seeds(args.seed)
     logger, training_stats = initialize_exp(
         args, "epoch", "loss", "prec1", "prec5", "loss_val", "prec1_val", "prec5_val"

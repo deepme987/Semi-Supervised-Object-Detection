@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel
+import torch.distributed as dist
 import torch.backends.cudnn as cudnn
 import torch.optim
 
@@ -115,7 +116,7 @@ parser.add_argument("--syncbn_process_group_size", type=int, default=2, help="""
 parser.add_argument("--dump_path", type=str, default=".",
                     help="experiment dump path for checkpoints and log")
 parser.add_argument("--seed", type=int, default=31, help="seed")
-
+parser.add_argument("--trial", type=int, default=-1, help="> 0 subset")
 
 # in order to access the self-defined prototypes etc. attributes
 class MyDataParallel(nn.DataParallel):
@@ -144,17 +145,24 @@ def main():
         logger.info("Device #{}: {}".format(i, torch.cuda.get_device_name(i)))
 
 
-
-
-
+    if args.trial > 0 :
     # build data
-    train_dataset = MultiCropDataset(
-        args.data_path,
-        args.size_crops,
-        args.nmb_crops,
-        args.min_scale_crops,
-        args.max_scale_crops,
-    )
+        train_dataset = MultiCropDataset(
+            args.data_path,
+            args.size_crops,
+            args.nmb_crops,
+            args.min_scale_crops,
+            args.max_scale_crops,
+            args.trial
+        )
+    else:
+        train_dataset = MultiCropDataset(
+            args.data_path,
+            args.size_crops,
+            args.nmb_crops,
+            args.min_scale_crops,
+            args.max_scale_crops,
+        )
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -375,13 +383,13 @@ def distributed_sinkhorn(out):
 
     # make the matrix sums to 1
     sum_Q = torch.sum(Q)
-    # dist.all_reduce(sum_Q)
+    dist.all_reduce(sum_Q)
     Q /= sum_Q
 
     for it in range(args.sinkhorn_iterations):
         # normalize each row: total weight per prototype must be 1/K
         sum_of_rows = torch.sum(Q, dim=1, keepdim=True)
-        # dist.all_reduce(sum_of_rows)
+        dist.all_reduce(sum_of_rows)
         Q /= sum_of_rows
         Q /= K
 
