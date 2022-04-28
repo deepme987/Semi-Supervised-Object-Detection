@@ -148,14 +148,14 @@ def load_pretrained_swav(ckp_path):
 
 
 def get_model(num_classes, pretrained_hub, returned_layers=None):
-    if args.mode == 'eval':
+    if args.mode == 'eval' or args.mode == 'resume':
         model = torch.load(os.path.join(args.checkpoint_path, args.checkpoint_file))
         model.eval()
         return model
 
     if pretrained_hub:
-        backbone = torch.hub.load("facebookresearch/swav", "resnet50")
-        # backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
+        # backbone = torch.hub.load("facebookresearch/swav", "resnet50")
+        backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
         print("Load pretrained swav backbone from Facebook hub")
     else:
         if not os.path.isdir(args.swav_path):
@@ -254,6 +254,13 @@ def main():
     
     model = get_model(num_classes, pretrained_hub=args.pretrained_hub)
     model.to(device)
+    if args.mode == 'train':
+        for module in model.modules():
+            if isinstance(module, nn.BatchNorm2d):
+                # module.weight.data.fill_(1)
+                # module.bias.data.zero_()
+                module.running_var.fill_(1)
+                module.running_mean.zero_()
 
     low_lr_param = []
     low_name = []
@@ -270,23 +277,6 @@ def main():
         else:
             high_lr_param.append(param)
             high_name.append(name)
-
-    # for module in model.modules():
-    #     if isinstance(module, nn.BatchNorm2d):
-    #         # module.weight.data.fill_(1)
-    #         # module.bias.data.zero_()
-    #         module.running_var.fill_(1)
-    #         module.running_mean.zero_()
-    # time.sleep(3)
-    # print(low_name)
-    # time.sleep(3)
-    # print("--------------")
-    # print(high_name)
-    # print("DONE")
-    # sys.stdout.flush()
-    # time.sleep(3)
-    # raise NotImplementedError
-
 
     # params = [p for p in model.parameters() if p.requires_grad]
     # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
