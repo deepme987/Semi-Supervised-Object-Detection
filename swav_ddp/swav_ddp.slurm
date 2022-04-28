@@ -33,12 +33,12 @@ echo "Dataset is copied to /tmp"
 echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
 export MASTER_ADDR=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
-export MASTER_PORT=19500
+export MASTER_PORT=50000
 
 master_node=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
 dist_url="tcp://"
 dist_url+=$master_node
-dist_url+=:40000
+dist_url+=:50000
 
 singularity exec --nv \
 --bind /scratch \

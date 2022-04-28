@@ -120,8 +120,10 @@ parser.add_argument("--seed", type=int, default=31, help="seed")
 # in order to access the self-defined prototypes etc. attributes
 class MyDataParallel(nn.DataParallel):
     def __getattr__(self, name):
-        return getattr(self.module, name)
-
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)
 
 def main():
     global args
