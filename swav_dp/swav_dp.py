@@ -112,7 +112,7 @@ parser.add_argument("--use_fp16", type=bool_flag, default=False,
                     help="whether to train with mixed precision or not")
 parser.add_argument("--syncbn_process_group_size", type=int, default=2, help=""" see
                     https://github.com/NVIDIA/apex/blob/master/apex/parallel/__init__.py#L58-L67""")
-parser.add_argument("--dump_path", type=str, default="/experiments",
+parser.add_argument("--dump_path", type=str, default=".",
                     help="experiment dump path for checkpoints and log")
 parser.add_argument("--seed", type=int, default=31, help="seed")
 
@@ -128,7 +128,7 @@ def main():
     args = parser.parse_args()
     # init_distributed_mode(args)
     fix_random_seeds(args.seed)
-    logger, training_stats = initialize_exp(args, "epoch", "loss")
+    print(os.environ)
 
     assert torch.cuda.is_available()
     device_count = torch.cuda.device_count()
@@ -137,10 +137,10 @@ def main():
         logger.info("Device #{}: {}".format(i, torch.cuda.get_device_name(i)))
 
     # single node multi GPU also need these 2 params
-    print(os.environ)
     args.rank = int(os.environ["RANK"])
     args.world_size = int(os.environ["WORLD_SIZE"])
 
+    logger, training_stats = initialize_exp(args, "epoch", "loss")
 
     # build data
     train_dataset = MultiCropDataset(
