@@ -339,13 +339,9 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
             for v in np.delete(np.arange(np.sum(args.nmb_crops)), crop_id):
                 x = output[bs * v: bs * (v + 1)] / args.temperature
                 #subloss -= torch.mean(torch.sum(q * F.log_softmax(x, dim=1), dim=1))
-                subloss -= torch.tensor(
-                    torch.mean(torch.sum(q * F.log_softmax(x, dim=1), dim=1)),
-                    dtype = torch.float)
+                subloss -= torch.mean(torch.sum(q * F.log_softmax(x, dim=1), dim=1))
                 del x
-            loss += torch.tensor(
-                subloss / (np.sum(args.nmb_crops) - 1),
-                dtype=torch.float)
+            loss += subloss / (np.sum(args.nmb_crops) - 1)
 
         loss /= len(args.crops_for_assign)
 
