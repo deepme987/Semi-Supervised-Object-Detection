@@ -50,7 +50,7 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --base_lr 0.3 \
 --final_lr 0.001 \
 --warmup_epochs 0 \
---batch_size 64 \
+--batch_size 128 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
