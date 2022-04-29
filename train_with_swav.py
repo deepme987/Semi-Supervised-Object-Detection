@@ -263,8 +263,8 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
         # print(model.backbone.body.layer4[0].bn1.running_mean)
         print("DONE")
         sys.stdout.flush()
-        # time.sleep(3)
-
+        time.sleep(3)
+    # raise NotImplementedError
 
     return model
 
