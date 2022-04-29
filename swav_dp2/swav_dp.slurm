@@ -8,15 +8,15 @@
 ##SBATCH --gres=gpu:1
 ##SBATCH --cpus-per-task=8
 
-#SBATCH --partition=n1s16-v100-2
-#SBATCH --gres=gpu:2
-#SBATCH --tasks-per-node=2
-#SBATCH --cpus-per-task=2
+##SBATCH --partition=n1s16-v100-2
+##SBATCH --gres=gpu:2
+##SBATCH --tasks-per-node=2
+##SBATCH --cpus-per-task=2
 
 
-##SBATCH --partition=n1c24m128-v100-4
-##SBATCH --gres=gpu:4
-##SBATCH --cpus-per-task=24
+#SBATCH --partition=n1c24m128-v100-4
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=24
 
 
 #SBATCH --time=24:00:00
@@ -44,10 +44,10 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
+python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --workers 2 \
---epochs 20 \
---base_lr 0.3 \
+--epochs 70 \
+--base_lr 0.4 \
 --final_lr 0.001 \
 --epsilon 0.03 \
 --warmup_epochs 0 \
@@ -58,6 +58,7 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
 --queue_length 1920 \
---epoch_queue_starts 10 \
---nmb_prototypes 1500
+--epoch_queue_starts 12 \
+--nmb_prototypes 2000 \
+--arch resnet34
 "
