@@ -56,7 +56,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
         loss_iter.append(loss_value)
-        if len(loss_iter) >= 2:
+        if len(loss_iter) >= 1000:
             smooth_loss_hist.append(sum(loss_iter) / float(len(loss_iter)))
             loss_iter = []
 
