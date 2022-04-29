@@ -59,6 +59,5 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --freeze_prototypes_niters 5005 \
 --queue_length 1920 \
 --epoch_queue_starts 10 \
---nmb_prototypes 1500 \
---trial 1024 \
+--nmb_prototypes 1500
 "
