@@ -19,6 +19,8 @@ from typing import Dict
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
 # TODO: Might need to be modified depends on the structure of our project files
 import swav_simplified.src.resnet50 as resnet_models
+import sys
+import time
 
 parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with labeled dataset")
 #########################
@@ -64,6 +66,32 @@ parser.add_argument("--swav_path", type=str, default="./swav_results",
 
 parser.add_argument("--debug", type=bool, default=False,
                     help="DEBUG architecture of model")
+
+class CustomizedBoxHead(nn.Module):
+    """
+    Standard heads for FPN-based models
+    Args:
+        in_channels (int): number of input channels
+        representation_size (int): size of the intermediate representation
+    """
+
+    def __init__(self, in_channels, representation_size):
+        super().__init__()
+
+        self.fc6 = nn.Linear(in_channels, representation_size)
+        self.ln1 = nn.LayerNorm(representation_size)
+        self.fc7 = nn.Linear(representation_size, representation_size)
+        self.ln2 = nn.LayerNorm(representation_size)
+
+    def forward(self, x):
+        x = x.flatten(start_dim=1)
+
+        x = self.fc6(x)
+        x = F.relu(self.ln1(x))
+        x = self.fc7(x)
+        x = F.relu(self.ln2(x))
+
+        return x
 
 
 class IntermediateLayerGetter(nn.ModuleDict):
@@ -180,18 +208,13 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
 
     # --------------------standard demo thing---------------------
 
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, pretrained_backbone=False)
 
     # Add normalize layer based on labeled dataset
     min_size, max_size = 800, 1333
     image_mean, image_std = [0.4697, 0.4517, 0.3954], [0.2305, 0.2258, 0.2261]
     norm_layer = GeneralizedRCNNTransform(min_size, max_size, image_mean, image_std)
     model.transform = norm_layer
-
-    # Use backbone
-
-    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
-    model.backbone.body = new_back_bone
 
     # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
@@ -201,22 +224,48 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
     # model.roi_heads.box_predictor.cls_score = nn.Linear(in_features=in_features, out_features=num_classes)
     # model.roi_heads.box_predictor.bbox_pred = nn.Linear(in_features=in_features, out_features=num_classes * 4)
 
+    # ---------------------------------------------------------
+    # Change backbone
+    # ---------------------------------------------------------
+    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
+    model.backbone.body = new_back_bone
+    for mod in model.modules():
+        if isinstance(mod, nn.BatchNorm2d):
+            mod.momentum = 0.01
+            mod.running_var.fill_(1)
+            mod.running_mean.zero_()
+
     for m in model.parameters():
         m.requires_grad = True
-    # if args.debug:
-    #     for name, param in model.named_parameters():
-    #         if param.requires_grad:
-    #             print(f'TRAIN: {name}')
-    #         else:
-    #             print(f'FROZEN: {name}')
 
-    #     for name, child in model.named_children():
-    #         print(f'name is: {name}')
-    #         print(f'module is: {child}')
-    #     print(model.backbone.body.bn1.state_dict())
-    #     print("DONE")
-    #     sys.stdout.flush()
-    #     time.sleep(3)
+
+    # ---------------------------------------------------------
+    # Change box_head
+    # ---------------------------------------------------------
+    out_channels = model.backbone.out_channels
+    resolution = model.roi_heads.box_roi_pool.output_size[0]
+    representation_size = 1024
+    new_box_head = CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
+    model.roi_heads.box_head = new_box_head
+
+
+    if args.debug:
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(f'TRAIN: {name}')
+            else:
+                print(f'FROZEN: {name}')
+
+        for name, child in model.named_children():
+            print(f'name is: {name}')
+            print(f'module is: {child}')
+        # print(model.backbone.body.layer4[0].bn1.running_var)
+        # print(model.backbone.body.layer4[0].bn1.running_mean)
+        print("DONE")
+        sys.stdout.flush()
+        # time.sleep(3)
+
+
     return model
 
 def main():
@@ -233,7 +282,7 @@ def main():
     ]
 
     training_stats_detailed = utils.PD_Stats(
-        os.path.join(args.checkpoint_path, "training_stats_detailed.pkl"), 
+        os.path.join(args.checkpoint_path, "train_stats_detailed.pkl"), 
         pd_train_header,
     )
 
@@ -256,13 +305,6 @@ def main():
     
     model = get_model(num_classes, pretrained_hub=args.pretrained_hub)
     model.to(device)
-    if args.mode == 'train':
-        for module in model.modules():
-            if isinstance(module, nn.BatchNorm2d):
-                # module.weight.data.fill_(1)
-                # module.bias.data.zero_()
-                module.running_var.fill_(1)
-                module.running_mean.zero_()
 
     low_lr_param = []
     low_name = []
@@ -270,19 +312,12 @@ def main():
     high_name = []
     for name, param in model.named_parameters():
         if "backbone.body" in name:
-            if "bn" in name:
-                continue
-                # high_lr_param.append(param)
-                # high_name.append(name)
-            else:
-                low_lr_param.append(param)
-                low_name.append(name)
+            low_lr_param.append(param)
+            low_name.append(name)
         else:
             high_lr_param.append(param)
             high_name.append(name)
 
-    # params = [p for p in model.parameters() if p.requires_grad]
-    # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
     optimizer = torch.optim.SGD(
          [
             {"params": high_lr_param},
@@ -293,7 +328,7 @@ def main():
          weight_decay=0.0005
     )
 
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
@@ -303,6 +338,7 @@ def main():
             run_variables=to_restore,
             state_dict=model,
             optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
         )
     start_epoch = to_restore["epoch"]
 
@@ -320,6 +356,7 @@ def main():
                 "epoch": epoch + 1,
                 "state_dict": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
+                'scheduler_state': lr_scheduler.state_dict()
             }
             torch.save(
                 save_dict,

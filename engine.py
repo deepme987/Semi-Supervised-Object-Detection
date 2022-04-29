@@ -22,7 +22,8 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     lr_scheduler = None
     if epoch == 0:
         warmup_factor = 1. / 1000
-        warmup_iters = min(1000, len(data_loader) - 1)
+        # change warmup_iters from 1000 to 2000
+        warmup_iters = min(2000, len(data_loader) - 1)
 
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
