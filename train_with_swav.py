@@ -66,6 +66,8 @@ parser.add_argument("--swav_path", type=str, default="./swav_results",
 
 parser.add_argument("--debug", type=bool, default=False,
                     help="DEBUG architecture of model")
+parser.add_argument("--gcp_sucks", type=bool, default=False,
+                    help="you know the answer")
 
 class CustomizedBoxHead(nn.Module):
     """
@@ -271,25 +273,31 @@ def get_model(num_classes, pretrained_hub, returned_layers=None):
 def main():
     global args
     args = parser.parse_args()
+
+    if not args.gcp_sucks:
+        args.data_path = '/labeled'
+
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     if not os.path.isdir(args.checkpoint_path):
         os.mkdir(args.checkpoint_path)
 
-    pd_train_header = [
-        "Epoch", "loss", "loss_classifier", 
-        "loss_box_reg", "loss_objectness",
-        "loss_rpn_box_reg",
-    ]
+    if not args.gcp_sucks:
+        pd_train_header = [
+            "Epoch", "loss", "loss_classifier", 
+            "loss_box_reg", "loss_objectness",
+            "loss_rpn_box_reg",
+        ]
 
-    training_stats_detailed = utils.PD_Stats(
-        os.path.join(args.checkpoint_path, "train_stats_detailed.pkl"), 
-        pd_train_header,
-    )
+        training_stats_detailed = utils.PD_Stats(
+            os.path.join(args.checkpoint_path, "train_stats_detailed.pkl"), 
+            pd_train_header,
+        )
 
-    training_stats = utils.PD_Stats(
-        os.path.join(args.checkpoint_path, "train_stats.pkl"), 
-        ["loss"],
-    )
+        training_stats = utils.PD_Stats(
+            os.path.join(args.checkpoint_path, "train_stats.pkl"), 
+            ["loss"],
+        )
     
     num_classes = 100
     train_dataset = LabeledDataset(root=args.data_path, split="training", transforms=get_transform(train=True))
@@ -328,7 +336,7 @@ def main():
          weight_decay=0.0005
     )
 
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
@@ -369,7 +377,7 @@ def main():
             # update the learning rate
             lr_scheduler.step()
 
-            if (epoch % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
+            if ((epoch + 1) % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
                 # evaluate on the test dataset
                 coco_res, _ = evaluate(model, valid_loader, device=device)
                 eval_result[epoch] = coco_res.coco_eval
