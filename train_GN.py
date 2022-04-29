@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #########################
 #### swav parameters ####
 #########################
-parser.add_argument("--pretrained_hub", action=argparse.BooleanOptionalAction,
+parser.add_argument("--pretrained_hub", default=1, type=int,
                     help="if backbone downloaded from Facebook hub")
 parser.add_argument("--swav_file", type=str, default="/swav_results/swav_ckp.pth",
                     help="path to swav checkpoints")
@@ -63,9 +63,9 @@ parser.add_argument("--checkpoint_file", type=str, default="",
                     help="name of saved model")
 
 
-parser.add_argument("--debug", action=argparse.BooleanOptionalAction,
+parser.add_argument("--debug", default=0, type=int,
                     help="DEBUG architecture of model")
-parser.add_argument("--gcp_sucks", action=argparse.BooleanOptionalAction,
+parser.add_argument("--gcp_sucks", default=0, type=int,
                     help="you know the answer")
         
 
@@ -152,7 +152,7 @@ def get_model(num_classes, returned_layers=None):
         model.eval()
         return model
 
-    if args.pretrained_hub:
+    if args.pretrained_hub == 1:
         backbone = torch.hub.load("facebookresearch/swav", "resnet50")
         # backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
         print("Load pretrained swav backbone from Facebook hub")
@@ -223,7 +223,7 @@ def get_model(num_classes, returned_layers=None):
     model.roi_heads.box_head = new_box_head
 
 
-    if args.debug:
+    if args.debug == 1:
         for name, param in model.named_parameters():
             if param.requires_grad:
                 print(f'TRAIN: {name}')
@@ -243,7 +243,7 @@ def main():
     global args
     args = parser.parse_args()
 
-    if args.gcp_sucks:
+    if args.gcp_sucks == 1:
         args.data_path = '/labeled'
 
     print('--------------------Args--------------------')
@@ -254,13 +254,13 @@ def main():
     if not os.path.isdir(args.checkpoint_path):
         os.mkdir(args.checkpoint_path)
 
-    if not args.gcp_sucks:
+    if args.gcp_sucks == 0:
         pd_train_header = [
             "Epoch", "loss", "loss_classifier", 
             "loss_box_reg", "loss_objectness",
             "loss_rpn_box_reg",
         ]
-        filename = "train_stats_test.pkl" if args.debug else "train_stats_detailed.pkl"
+        filename = "train_stats_test.pkl" if (args.debug == 1) else "train_stats_detailed.pkl"
         training_stats_detailed = utils.PD_Stats(
             os.path.join(args.checkpoint_path, filename), 
             pd_train_header,
@@ -275,7 +275,7 @@ def main():
     train_dataset = LabeledDataset(root=args.data_path, split="training", transforms=get_transform(train=True))
     valid_dataset = LabeledDataset(root=args.data_path, split="validation", transforms=get_transform(train=False))
     
-    if args.debug:
+    if args.debug == 1:
         index = list(range(10))
         train_dataset = torch.utils.data.Subset(train_dataset, index)
         valid_dataset = torch.utils.data.Subset(valid_dataset, index)
@@ -332,7 +332,7 @@ def main():
         for epoch in range(start_epoch, args.epochs):
             # train for one epoch, printing every 10 iterations
             train_log, smooth_loss_hist = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
-            if not args.gcp_sucks:
+            if args.gcp_sucks == 0:
                 training_stats_detailed.update(train_log)
                 training_stats.update_col(smooth_loss_hist)
 
