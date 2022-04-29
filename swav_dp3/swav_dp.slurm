@@ -60,6 +60,6 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --queue_length 1920 \
 --epoch_queue_starts 12 \
 --nmb_prototypes 1500 \
---checkpoint_freq 5
+--checkpoint_freq 5 \
 --trial 1024
 "
