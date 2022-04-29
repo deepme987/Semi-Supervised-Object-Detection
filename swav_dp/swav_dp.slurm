@@ -11,7 +11,7 @@
 #SBATCH --partition=n1s16-v100-2
 #SBATCH --gres=gpu:2
 #SBATCH --ntasks-per-node=2
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 
 
 ##SBATCH --partition=n1c24m128-v100-4
@@ -46,7 +46,7 @@ source /ext3/env.sh
 conda activate
 python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --workers 2 \
---epochs 100 \
+--epochs 20 \
 --base_lr 0.3 \
 --final_lr 0.001 \
 --epsilon 0.03 \
@@ -60,4 +60,6 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --queue_length 1920 \
 --epoch_queue_starts 12 \
 --nmb_prototypes 1500 \
+--checkpoint_freq 5
+--trial 1024
 "
