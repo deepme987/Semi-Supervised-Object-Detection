@@ -46,9 +46,10 @@ source /ext3/env.sh
 conda activate
 python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --workers 2 \
---epochs 15 \
+--epochs 20 \
 --base_lr 0.3 \
 --final_lr 0.001 \
+--epsilon 0.03 \
 --warmup_epochs 0 \
 --batch_size 64 \
 --size_crops 224 96 \
@@ -56,8 +57,9 @@ python -m torch.distributed.launch --nproc_per_node=2 swav_dp.py \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 3840 \
---epoch_queue_starts 10 \
---nmb_prototypes 2000 \
---trial 1024 \
+--queue_length 1920 \
+--epoch_queue_starts 12 \
+--nmb_prototypes 1500 \
+--checkpoint_freq 5
+--trial 1024
 "
