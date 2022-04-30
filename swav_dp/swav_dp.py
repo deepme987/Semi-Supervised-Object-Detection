@@ -180,14 +180,15 @@ def main():
         output_dim=args.feat_dim,
         nmb_prototypes=args.nmb_prototypes,
     )
-    # copy model to GPU
-    model = model.cuda()
+
     # data parallel
     if device_count > 1:
         model = MyDataParallel(model)
     if args.rank == 0:
         logger.info(model)
     logger.info("Building model done.")
+    # copy model to GPU
+    model = model.cuda()
 
     # build optimizer
     optimizer = torch.optim.SGD(
