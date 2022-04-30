@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #########################
 parser.add_argument("--pretrained_hub", default=1, type=int,
                     help="if backbone downloaded from Facebook hub")
-parser.add_argument("--swav_file", type=str, default="./swav_results/swav_res18_ep48.pth",
+parser.add_argument("--swav_file", type=str, default="swav_res18_ep48.pth",
                     help="path to swav checkpoints")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
@@ -49,7 +49,7 @@ parser.add_argument("--checkpoint_freq", type=int, default=3,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
                     default='resnet50', type=str, help="Architecture")
-parser.add_argument("--sched_step", default=3, type=int,
+parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
 ##########################
 #### other parameters ####
