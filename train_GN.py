@@ -54,6 +54,8 @@ parser.add_argument("--low_lr", default=0.0001, type=float,
                     help="Step size of lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
+parser.add_argument("--sched_gamma", default=0.1, type=int,
+                    help="lr scheduler")
 ##########################
 #### other parameters ####
 ##########################
@@ -318,7 +320,7 @@ def main():
          weight_decay=0.0005
     )
 
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}

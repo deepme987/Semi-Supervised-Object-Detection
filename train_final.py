@@ -50,11 +50,13 @@ parser.add_argument("--checkpoint_freq", type=int, default=3,
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
                     default='resnet50', type=str, help="Architecture")
 parser.add_argument("--high_lr", default=0.005, type=float,
-                    help="Step size of lr scheduler")
+                    help=" lr scheduler")
 parser.add_argument("--low_lr", default=0.0001, type=float,
-                    help="Step size of lr scheduler")
+                    help=" lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
+parser.add_argument("--sched_gamma", default=0.1, type=int,
+                    help="lr scheduler")
 ##########################
 #### other parameters ####
 ##########################
@@ -305,7 +307,7 @@ def main():
          weight_decay=0.0005
     )
 
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
