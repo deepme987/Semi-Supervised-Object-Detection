@@ -29,7 +29,7 @@ from src.utils import (
     init_distributed_mode,
 )
 from src.multicropdataset import MultiCropDataset
-from src.resnet50 import resnet_models
+import src.resnet50 as resnet_models
 
 logger = getLogger()
 
