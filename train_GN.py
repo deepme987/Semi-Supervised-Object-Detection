@@ -48,6 +48,10 @@ parser.add_argument("--checkpoint_freq", type=int, default=3,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
                     default='resnet50', type=str, help="Architecture")
+parser.add_argument("--high_lr", default=0.005, type=float,
+                    help="Step size of lr scheduler")
+parser.add_argument("--low_lr", default=0.0001, type=float,
+                    help="Step size of lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
 ##########################
@@ -307,9 +311,9 @@ def main():
     optimizer = torch.optim.SGD(
          [
             {"params": high_lr_param},
-            {"params": low_lr_param, "lr": 0.0001} 
+            {"params": low_lr_param, "lr": args.low_lr} 
          ],
-         lr=0.005,
+         lr=args.high_lr,
          momentum=0.9,
          weight_decay=0.0005
     )
