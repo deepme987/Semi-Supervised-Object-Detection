@@ -134,8 +134,8 @@ def main():
 
     # print(os.environ)
     # single node multi GPU also need these 2 params
-    #args.rank = int(os.environ["RANK"])
-    args.world_size = int(os.environ["WORLD_SIZE"])
+    # args.rank = int(os.environ["RANK"])
+    # args.world_size = int(os.environ["WORLD_SIZE"])
 
     logger, training_stats = initialize_exp(args, "epoch", "loss")
     assert torch.cuda.is_available()
@@ -245,8 +245,7 @@ def main():
         if args.queue_length > 0 and epoch >= args.epoch_queue_starts and queue is None:
             queue = torch.zeros(
                 len(args.crops_for_assign),
-                # 需要去worldsize吗 每个proc里的queue
-                args.queue_length // args.world_size,
+                args.queue_length,
                 args.feat_dim,
             ).cuda()
 
@@ -382,7 +381,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 @torch.no_grad()
 def distributed_sinkhorn(out):
     Q = torch.exp(out / args.epsilon).t() # Q is K-by-B for consistency with notations from our paper
-    B = Q.shape[1] * args.world_size # number of samples to assign
+    B = Q.shape[1] # * args.world_size # number of samples to assign
     K = Q.shape[0] # how many prototypes
 
     # make the matrix sums to 1
