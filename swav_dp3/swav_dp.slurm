@@ -51,7 +51,7 @@ python swav_dp.py \
 --epsilon 0.05 \
 --warmup_epochs 10 \
 --start_warmup 0.3 \
---batch_size 256 \
+--batch_size 512 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \

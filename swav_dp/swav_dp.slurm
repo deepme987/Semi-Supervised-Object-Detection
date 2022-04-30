@@ -62,7 +62,6 @@ python swav_dp.py \
 --nmb_prototypes 1500 \
 --checkpoint_freq 5 \
 --arch resnet50 \
---temperature 0.1 \
---trial 2048
+--temperature 0.1
 "
 
