@@ -79,7 +79,7 @@ def initialize_exp(params, *args, dump_params=True):
     - create a logger
     - create a panda object to keep track of the training statistics
     """
-
+    '''
     # dump parameters
     if not params.rank and not os.path.isdir(params.dump_path):
         os.mkdir(params.dump_path)
@@ -99,6 +99,30 @@ def initialize_exp(params, *args, dump_params=True):
     # create a logger
     logger = create_logger(
         os.path.join(params.dump_path, "train.log"), rank=params.rank
+    )
+    logger.info("============ Initialized logger ============")
+    logger.info(
+        "\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(params)).items()))
+    )
+    logger.info("The experiment will be stored in %s\n" % params.dump_path)
+    logger.info("")
+    return logger, training_stats
+    '''
+    if not os.path.isdir(params.dump_path):
+        os.mkdir(params.dump_path)
+    if dump_params:
+        pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb+"))
+
+    params.dump_checkpoints = os.path.join(params.dump_path, "checkpoints")
+    if not os.path.isdir(params.dump_checkpoints):
+        os.mkdir(params.dump_checkpoints)
+
+    training_stats = PD_Stats(
+        os.path.join(params.dump_path, "stats.pkl"), args
+    )
+
+    logger = create_logger(
+        os.path.join(params.dump_path, "train.log")
     )
     logger.info("============ Initialized logger ============")
     logger.info(

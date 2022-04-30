@@ -190,7 +190,6 @@ def main():
     # copy model to GPU
     model = model.cuda()
 
-
     # build optimizer
     optimizer = torch.optim.SGD(
         model.parameters(),

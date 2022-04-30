@@ -10,14 +10,14 @@
 
 ##SBATCH --partition=n1s16-v100-2
 ##SBATCH --gres=gpu:2
-##SBATCH --ntasks-per-node=2
+##SBATCH --tasks-per-node=2
 ##SBATCH --cpus-per-task=2
 
 
 #SBATCH --partition=n1c24m128-v100-4
 #SBATCH --gres=gpu:4
-##SBATCH --mem-per-gpu=16G
 #SBATCH --cpus-per-task=24
+##SBATCH --mem-per-cpu=8G
 
 
 #SBATCH --time=24:00:00
@@ -45,7 +45,7 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
+python swav_dp.py \
 --workers 2 \
 --epochs 70 \
 --base_lr 0.5 \
@@ -66,3 +66,4 @@ python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --temperature 0.1 \
 --trial 1024
 "
+

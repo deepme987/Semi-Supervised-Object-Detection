@@ -19,6 +19,7 @@
 #SBATCH --cpus-per-task=24
 ##SBATCH --mem-per-cpu=8G
 
+
 #SBATCH --time=24:00:00
 #SBATCH --output=swavdp_%j.out
 #SBATCH --error=swavdp_%j.err
@@ -44,24 +45,24 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
+python swav_dp.py \
 --workers 2 \
 --epochs 70 \
 --base_lr 0.5 \
 --final_lr 0.0005 \
 --epsilon 0.03 \
 --warmup_epochs 0 \
---batch_size 256 \
+--batch_size 128 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 2048 \
+--queue_length 1536 \
 --epoch_queue_starts 12 \
 --nmb_prototypes 1500 \
 --checkpoint_freq 5 \
---arch resnet18 \
+--arch resnet34 \
 --temperature 0.1 \
 --trial 1024
 "

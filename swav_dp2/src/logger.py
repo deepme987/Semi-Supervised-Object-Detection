@@ -29,7 +29,7 @@ class LogFormatter:
         return "%s - %s" % (prefix, message) if message else ""
 
 
-def create_logger(filepath, rank):
+def create_logger(filepath):
     """
     Create a logger.
     Use a different log file for each process.
@@ -39,8 +39,8 @@ def create_logger(filepath, rank):
 
     # create file handler and set level to debug
     if filepath is not None:
-        if rank > 0:
-            filepath = "%s-%i" % (filepath, rank)
+        # if rank > 0:
+            # filepath = "%s-%i" % (filepath, rank)
         file_handler = logging.FileHandler(filepath, "a")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
