@@ -8,14 +8,13 @@
 ##SBATCH --gres=gpu:1
 ##SBATCH --cpus-per-task=8
 
-#SBATCH --partition=n1s16-v100-2
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=16
-##SBATCH --tasks-per-node=2
+##SBATCH --partition=n1s16-v100-2
+##SBATCH --gres=gpu:2
+##SBATCH --cpus-per-task=16
 
-##SBATCH --partition=n1c24m128-v100-4
-##SBATCH --gres=gpu:4
-##SBATCH --cpus-per-task=24
+#SBATCH --partition=n1c24m128-v100-4
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=24
 ##SBATCH --mem-per-cpu=8G
 
 
@@ -46,23 +45,22 @@ source /ext3/env.sh
 conda activate
 python swav_dp.py \
 --workers 2 \
---epochs 70 \
---base_lr 0.5 \
---final_lr 0.0005 \
---epsilon 0.03 \
+--epochs 100 \
+--base_lr 0.05 \
+--final_lr 0.00005 \
+--epsilon 0.05 \
 --warmup_epochs 0 \
---batch_size 256 \
+--batch_size 512 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
 --queue_length 2048 \
---epoch_queue_starts 12 \
+--epoch_queue_starts 8 \
 --nmb_prototypes 1500 \
---checkpoint_freq 5 \
---arch resnet18 \
---temperature 0.1 \
---trial 1024
+--checkpoint_freq 3 \
+--arch resnet34 \
+--temperature 0.1
 "
 
