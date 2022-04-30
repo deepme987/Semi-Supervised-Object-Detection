@@ -184,9 +184,9 @@ def get_model(num_classes, returned_layers=None):
     # Change backbone
     # ---------------------------------------------------------
     # replace_bn(model.backbone.body, "backbone.body")
-    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
-    model.backbone.body = new_back_bone
-    replace_bn(model.backbone.body, "backbone.body")
+    model.backbone.body.load_state_dict(new_back_bone.state_dict())
+    # model.backbone.body = new_back_bone
+    # replace_bn(model.backbone.body, "backbone.body")
 
     for m in model.parameters():
         m.requires_grad = True
@@ -349,8 +349,8 @@ def main():
                 eval_result[epoch] = coco_res.coco_eval
     # final eval
     # if (args.eval_freq % args.epochs != 0):
-    coco_res, _ = evaluate(model, valid_loader, device=device)
-    eval_result[args.epochs] = coco_res.coco_eval
+    #     coco_res, _ = evaluate(model, valid_loader, device=device)
+    #     eval_result[args.epochs] = coco_res.coco_eval
 
     # with open(os.path.join(args.checkpoint_path, "eval_res.pickle"), "w") as outfile:
     #     pickle.dump(eval_result, outfile)
