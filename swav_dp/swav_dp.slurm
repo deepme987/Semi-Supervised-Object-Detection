@@ -45,7 +45,7 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python swav_dp.py \
+python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --workers 2 \
 --epochs 70 \
 --base_lr 0.5 \
