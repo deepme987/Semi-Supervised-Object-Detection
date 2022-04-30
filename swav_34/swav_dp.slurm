@@ -50,7 +50,7 @@ python main_swav.py \
 --max_scale_crops 1. 0.14 \
 --crops_for_assign 0 1 \
 --queue_length 3840 \
---batch_size 256 \
+--batch_size 128 \
 --base_lr 0.5 \
 --final_lr 0.0005 \
 --warmup_epochs 0 \
