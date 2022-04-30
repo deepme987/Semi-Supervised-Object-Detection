@@ -10,13 +10,14 @@
 
 ##SBATCH --partition=n1s16-v100-2
 ##SBATCH --gres=gpu:2
-##SBATCH --tasks-per-node=2
+##SBATCH --ntasks-per-node=2
 ##SBATCH --cpus-per-task=2
 
 
 #SBATCH --partition=n1c24m128-v100-4
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=24
+#SBATCH --ntasks-per-node=4
 
 
 #SBATCH --time=24:00:00
@@ -47,18 +48,21 @@ conda activate
 python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --workers 2 \
 --epochs 70 \
---base_lr 0.4 \
---final_lr 0.001 \
+--base_lr 0.5 \
+--final_lr 0.0005 \
 --epsilon 0.03 \
 --warmup_epochs 0 \
---batch_size 64 \
+--batch_size 128 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 1280 \
+--queue_length 1536 \
 --epoch_queue_starts 12 \
---nmb_prototypes 2000 \
---arch resnet34
+--nmb_prototypes 1500 \
+--checkpoint_freq 5 \
+--arch resnet18 \
+--temperature 0.1 \
+--trial 1024
 "
