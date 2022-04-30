@@ -166,3 +166,30 @@ class CustomizedBoxHeadCNN(nn.Module):
         out = y + x
         out = self.relu(out)
         return out
+
+
+class CustomizedBoxHeadCNNv2(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.shortcut = self.build_layer(256, 1024, (1, 1), (3, 3))
+        self.layers = nn.Sequential(
+            self.build_layer(256, 128, (1, 1), (2, 2)),
+            self.build_layer(128, 128, (2, 2), (1, 1), padding=(1, 1)),
+            self.build_layer(128, 1024, (1, 1), (1, 1)),
+
+            self.build_layer(1024, 128, (1, 1), (2, 2)),
+            self.build_layer(128, 128, (2, 2), (1, 1), padding=(1, 1)),
+            self.build_layer(128, 1024, (1, 1), (1, 1)),
+
+            nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+
+    def build_layer(self, in_channels, out_channels, kernel, stride, padding=None):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel, stride=stride, bias=False),
+            nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+
+    def forward(self, x):
+        x = self.layers(x)
+        return x

@@ -4,28 +4,27 @@
 #   note: only work for resnet50
 # -----------------------------------------------------------
 import argparse
+import build_model
+import copy
+import customized_module as my_nn
+from dataset import UnlabeledDataset, LabeledDataset
+from engine import train_one_epoch, evaluate
 import os
+from torchvision.models.detection.transform import GeneralizedRCNNTransform
+import swav_resnet as resnet_models
+import sys
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import transforms as T
 import utils
-from engine import train_one_epoch, evaluate
-from dataset import UnlabeledDataset, LabeledDataset
-from torchvision.models.detection.transform import GeneralizedRCNNTransform
-# TODO: Might need to be modified depends on the structure of our project files
-import swav_resnet as resnet_models
-import sys
-import time
-import customized_module as my_nn
 
 parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with labeled dataset")
 #########################
 #### swav parameters ####
 #########################
-parser.add_argument("--pretrained_hub", default=1, type=int,
+parser.add_argument("--pretrained_hub", default=0, type=int,
                     help="if backbone downloaded from Facebook hub")
 parser.add_argument("--swav_file", type=str, default="swav_res18_ep48.pth",
                     help="path to swav checkpoints")
@@ -48,15 +47,19 @@ parser.add_argument("--eval_freq", default=5, type=int,
 parser.add_argument("--checkpoint_freq", type=int, default=3,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
-                    default='resnet50', type=str, help="Architecture")
+                    default='resnet18', type=str, help="Architecture")
 parser.add_argument("--high_lr", default=0.005, type=float,
-                    help=" lr scheduler")
+                    help="Step size of lr scheduler")
 parser.add_argument("--low_lr", default=0.0001, type=float,
-                    help=" lr scheduler")
+                    help="Step size of lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
 parser.add_argument("--sched_gamma", default=0.1, type=float,
                     help="lr scheduler")
+parser.add_argument("--norm_layer", choices=['FBN', 'GN', 'IN'],
+                    default='FBN', type=str, help="Norm layer type.")
+parser.add_argument("--box_head", choices=['MLP', 'RES'],
+                    default='MLP', type=str, help="box head type.")
 ##########################
 #### other parameters ####
 ##########################
@@ -75,23 +78,6 @@ parser.add_argument("--debug", default=0, type=int,
 parser.add_argument("--gcp_sucks", default=0, type=int,
                     help="you know the answer")
         
-
-def replace_bn(m, name):    
-    """
-        Warning: not a generalized verion! 
-        Use it only if you know what you are doing.
-    """
-    for attr_str in dir(m):
-        target_attr = getattr(m, attr_str)
-
-        if type(target_attr) == torch.nn.BatchNorm2d:
-            # print('replaced: ', name, attr_str)
-            setattr(m, attr_str, my_nn.FrozenBatchNorm2d(target_attr.num_features, target_attr.eps))
-    for n, ch in m.named_children():
-        if isinstance(ch, nn.BatchNorm2d):
-            m[1] = my_nn.FrozenBatchNorm2d(m[1].num_features, m[1].eps)
-        replace_bn(ch, n)
-
 
 def get_transform(train):
     transforms = []
@@ -147,7 +133,6 @@ def get_model(num_classes, returned_layers=None):
 
     if args.pretrained_hub == 1:
         backbone = torch.hub.load("facebookresearch/swav", "resnet50")
-        # backbone = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=True)
         print("Load pretrained swav backbone from Facebook hub")
     else:
         backbone = load_pretrained_swav(args.swav_file)
@@ -158,7 +143,6 @@ def get_model(num_classes, returned_layers=None):
     backbone.avgpool = nn.Identity()
     backbone.fc = nn.Identity()
     # --------------------Map resnet backbone---------------------
-    # TODO: only for resnet50
     if returned_layers is None:
         returned_layers = [1, 2, 3, 4]
     if min(returned_layers) <= 0 or max(returned_layers) >= 5:
@@ -166,7 +150,6 @@ def get_model(num_classes, returned_layers=None):
     return_layers = {f"layer{k}": str(v) for v, k in enumerate(returned_layers)}
 
     new_back_bone = my_nn.IntermediateLayerGetter(backbone, return_layers=return_layers)
-
 
     # --------------------standard demo thing---------------------
 
@@ -183,16 +166,24 @@ def get_model(num_classes, returned_layers=None):
 
     # replace the pre-trained head with a new one
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-    # model.roi_heads.box_predictor.cls_score = nn.Linear(in_features=in_features, out_features=num_classes)
-    # model.roi_heads.box_predictor.bbox_pred = nn.Linear(in_features=in_features, out_features=num_classes * 4)
 
     # ---------------------------------------------------------
     # Change backbone
     # ---------------------------------------------------------
-    # replace_bn(model.backbone.body, "backbone.body")
-    model.backbone.body.load_state_dict(new_back_bone.state_dict())
-    # model.backbone.body = new_back_bone
-    # replace_bn(model.backbone.body, "backbone.body")
+
+    new_back_bone_copy = copy.deepcopy(new_back_bone)
+    model.backbone.body = new_back_bone
+    if args.norm_layer == "FBN":
+        build_model.replace_bn_FBN(model.backbone.body, "backbone.body")
+        model.backbone.body.load_state_dict(new_back_bone_copy.state_dict())
+    elif args.norm_layer == "GN":
+        build_model.replace_bn_GN(model.backbone.body, "backbone.body")
+    elif args.norm_layer == "IN":
+        build_model.replace_bn_IN(model.backbone.body, "backbone.body")
+    else:
+        print("WARNING: Norm Layer not replaced")
+
+    
 
     for m in model.parameters():
         m.requires_grad = True
@@ -210,10 +201,14 @@ def get_model(num_classes, returned_layers=None):
     # ---------------------------------------------------------
     # Change box_head
     # ---------------------------------------------------------
-    out_channels = model.backbone.out_channels
-    resolution = model.roi_heads.box_roi_pool.output_size[0]
-    representation_size = 1024
-    new_box_head = my_nn.CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
+    if args.box_head == "MLP":
+        out_channels = model.backbone.out_channels
+        resolution = model.roi_heads.box_roi_pool.output_size[0]
+        representation_size = 1024
+        new_box_head = my_nn.CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
+    elif args.box_head == "RES":
+        raise NotImplementedError
+        # new_box_head = my_nn.CustomizedBoxHeadCNNv2()
     model.roi_heads.box_head = new_box_head
 
 
@@ -227,11 +222,11 @@ def get_model(num_classes, returned_layers=None):
         for name, child in model.named_children():
             print(f'name is: {name}')
             print(f'module is: {child}')
-        # print(model.backbone.body.layer4[0].bn1.running_var)
-        # print(model.backbone.body.layer4[0].bn1.running_mean)
+        print(model.backbone.body.layer4[0].bn1.weight)
+        print(model.backbone.body.layer4[0].bn1.weight)
         print("DONE")
         sys.stdout.flush()
-        # raise NotImplementedError
+        raise NotImplementedError
     return model
 
 def main():
@@ -240,6 +235,10 @@ def main():
 
     if args.gcp_sucks == 1:
         args.data_path = '/labeled'
+
+    if args.debug == 1:
+        args.eval_freq = 420
+        args.checkpoint_freq = 420
 
     print('--------------------Args--------------------')
     print(' '.join(f'{k}={v}\n' for k, v in vars(args).items()))
@@ -288,8 +287,12 @@ def main():
     for name, param in model.named_parameters():
         if "backbone.body" in name:
             if "bn" in name:
-                param.running_var.fill_(1)
-                param.running_mean.zero_()
+                if args.norm_layer == "FBN":
+                    param.running_var.fill_(1)
+                    param.running_mean.zero_()
+                else:
+                    high_lr_param.append(param)
+                    high_name.append(name)
             else:
                 low_lr_param.append(param)
                 low_name.append(name)
@@ -342,22 +345,20 @@ def main():
                 save_dict,
                 os.path.join(args.checkpoint_path, "checkpoint.pth.tar"),
             )
-            # save whole model instead of state_dict
-            if (epoch % args.checkpoint_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
-                torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
-
             # update the learning rate
             lr_scheduler.step()
 
-            if ((epoch + 1) % args.eval_freq == 0) and ((epoch > 0) or (epoch == args.epochs - 1)):
-                # evaluate on the test dataset
-                coco_res, _ = evaluate(model, valid_loader, device=device)
-                eval_result[epoch] = coco_res.coco_eval
-    # final eval
-    # if (args.eval_freq % args.epochs != 0):
-    coco_res, _ = evaluate(model, valid_loader, device=device)
-    eval_result[args.epochs] = coco_res.coco_eval
+            if args.debug == 0:
+                # save whole model instead of state_dict
+                if (((epoch + 1) % args.eval_freq == 0 and (epoch > 0)) or (epoch == args.epochs - 1)):
+                    torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
 
+                if (((epoch + 1) % args.eval_freq == 0 and (epoch > 0)) or (epoch == args.epochs - 1)):
+                    # evaluate on the test dataset
+                    coco_res, _ = evaluate(model, valid_loader, device=device)
+                    eval_result[epoch] = coco_res.coco_eval
+
+    # fuck GCP
     # with open(os.path.join(args.checkpoint_path, "eval_res.pickle"), "w") as outfile:
     #     pickle.dump(eval_result, outfile)
 
