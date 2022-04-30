@@ -134,7 +134,7 @@ def main():
 
     # print(os.environ)
     # single node multi GPU also need these 2 params
-    args.rank = int(os.environ["RANK"])
+    #args.rank = int(os.environ["RANK"])
     args.world_size = int(os.environ["WORLD_SIZE"])
 
     logger, training_stats = initialize_exp(args, "epoch", "loss")
@@ -184,8 +184,7 @@ def main():
     # data parallel
     if device_count > 1:
         model = MyDataParallel(model)
-    if args.rank == 0:
-        logger.info(model)
+    logger.info(model)
     logger.info("Building model done.")
     # copy model to GPU
     model = model.cuda()
@@ -225,7 +224,7 @@ def main():
     # build the queue
     queue = None
     # each device one queue
-    queue_path = os.path.join(args.dump_path, "queue" + str(args.rank) + ".pth")
+    queue_path = os.path.join(args.dump_path, "queue.pth")
     if os.path.isfile(queue_path):
         queue = torch.load(queue_path)["queue"]
     # the queue needs to be divisible by the batch size
@@ -256,7 +255,8 @@ def main():
         training_stats.update(scores)
 
         # save checkpoints
-        if args.rank == 0:
+        # if args.rank == 0:
+        if True:
             if device_count > 1:
                 save_dict = {
                     "epoch": epoch + 1,
@@ -361,7 +361,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
         losses.update(loss.item(), inputs[0].size(0))
         batch_time.update(time.time() - end)
         end = time.time()
-        if args.rank ==0 and it % 50 == 0:
+        if it % 50 == 0:
             logger.info(
                 "Epoch: [{0}][{1}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
