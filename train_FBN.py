@@ -195,7 +195,7 @@ def get_model(num_classes, returned_layers=None):
     new_back_bone_copy = copy.deepcopy(new_back_bone)
     model.backbone.body = new_back_bone
     replace_bn(model.backbone.body, "backbone.body")
-    # model.backbone.body.load_state_dict(new_back_bone_copy.state_dict())
+    model.backbone.body.load_state_dict(new_back_bone_copy.state_dict())
 
     for m in model.parameters():
         m.requires_grad = True
