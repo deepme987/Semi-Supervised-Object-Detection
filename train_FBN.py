@@ -20,6 +20,7 @@ import swav_resnet as resnet_models
 import sys
 import time
 import customized_module as my_nn
+import copy
 
 parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with labeled dataset")
 #########################
@@ -55,7 +56,7 @@ parser.add_argument("--low_lr", default=0.0001, type=float,
                     help="Step size of lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
-parser.add_argument("--sched_gamma", default=0.1, type=int,
+parser.add_argument("--sched_gamma", default=0.1, type=float,
                     help="lr scheduler")
 ##########################
 #### other parameters ####
@@ -191,8 +192,10 @@ def get_model(num_classes, returned_layers=None):
     # ---------------------------------------------------------
     # replace_bn(model.backbone.body, "backbone.body")
     # model.backbone.body.load_state_dict(new_back_bone.state_dict())
+    new_back_bone_copy = copy.deepcopy(new_back_bone)
     model.backbone.body = new_back_bone
     replace_bn(model.backbone.body, "backbone.body")
+    # model.backbone.body.load_state_dict(new_back_bone_copy.state_dict())
 
     for m in model.parameters():
         m.requires_grad = True
@@ -227,11 +230,11 @@ def get_model(num_classes, returned_layers=None):
         for name, child in model.named_children():
             print(f'name is: {name}')
             print(f'module is: {child}')
-        # print(model.backbone.body.layer4[0].bn1.running_var)
-        # print(model.backbone.body.layer4[0].bn1.running_mean)
+        print(model.backbone.body.layer4[0].bn1.weight)
+        print(model.backbone.body.layer4[0].bn1.weight)
         print("DONE")
         sys.stdout.flush()
-        # raise NotImplementedError
+        raise NotImplementedError
     return model
 
 def main():

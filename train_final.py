@@ -55,7 +55,7 @@ parser.add_argument("--low_lr", default=0.0001, type=float,
                     help=" lr scheduler")
 parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
-parser.add_argument("--sched_gamma", default=0.1, type=int,
+parser.add_argument("--sched_gamma", default=0.1, type=float,
                     help="lr scheduler")
 ##########################
 #### other parameters ####
