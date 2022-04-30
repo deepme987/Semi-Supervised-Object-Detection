@@ -51,7 +51,7 @@ python swav_dp.py \
 --epsilon 0.05 \
 --warmup_epochs 10 \
 --start_warmup 0.3 \
---batch_size 256 \
+--batch_size 128 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
@@ -62,7 +62,6 @@ python swav_dp.py \
 --nmb_prototypes 1500 \
 --checkpoint_freq 5 \
 --arch resnet50 \
---temperature 0.1 \
---trial 2048
+--temperature 0.1
 "
 
