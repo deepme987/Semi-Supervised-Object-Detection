@@ -51,16 +51,16 @@ python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --final_lr 0.0006 \
 --epsilon 0.05 \
 --warmup_epochs 10 \
---batch_size 128 \
+--batch_size 80 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 1600 \
+--queue_length 1200 \
 --epoch_queue_starts 12 \
 --nmb_prototypes 3000 \
 --checkpoint_freq 5 \
---arch resnet34 \
+--arch resnet50 \
 --temperature 0.1
 "

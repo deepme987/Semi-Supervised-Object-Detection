@@ -51,13 +51,13 @@ python -m torch.distributed.launch --nproc_per_node=4 swav_dp.py \
 --final_lr 0.001 \
 --epsilon 0.03 \
 --warmup_epochs 0 \
---batch_size 128 \
+--batch_size 64 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 1920 \
+--queue_length 1280 \
 --epoch_queue_starts 12 \
 --nmb_prototypes 2000 \
 --arch resnet34
