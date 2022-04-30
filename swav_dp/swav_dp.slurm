@@ -46,11 +46,10 @@ conda activate
 python swav_dp.py \
 --workers 2 \
 --epochs 100 \
---base_lr 0.01 \
---final_lr 0.00001 \
---epsilon 0.05 \
---warmup_epochs 10 \
---start_warmup 0.3 \
+--base_lr 0.6 \
+--final_lr 0.0006 \
+--epsilon 0.03 \
+--warmup_epochs 0 \
 --batch_size 128 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
@@ -58,10 +57,9 @@ python swav_dp.py \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
 --queue_length 2048 \
---epoch_queue_starts 30 \
+--epoch_queue_starts 10 \
 --nmb_prototypes 1500 \
---checkpoint_freq 5 \
+--checkpoint_freq 25 \
 --arch resnet50 \
---temperature 0.1 \
---trial 2048
+--temperature 0.1
 "
