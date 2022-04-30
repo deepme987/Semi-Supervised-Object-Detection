@@ -204,10 +204,11 @@ def get_model(num_classes, returned_layers=None):
     # ---------------------------------------------------------
     # Change box_head
     # ---------------------------------------------------------
-    out_channels = model.backbone.out_channels
-    resolution = model.roi_heads.box_roi_pool.output_size[0]
-    representation_size = 1024
-    new_box_head = my_nn.CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
+    # out_channels = model.backbone.out_channels
+    # resolution = model.roi_heads.box_roi_pool.output_size[0]
+    # representation_size = 1024
+    # new_box_head = my_nn.CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
+    new_box_head = my_nn.CustomizedBoxHeadCNN()
     model.roi_heads.box_head = new_box_head
 
 
