@@ -45,19 +45,20 @@ source /ext3/env.sh
 conda activate
 python swav_dp.py \
 --workers 2 \
---epochs 70 \
---base_lr 0.5 \
---final_lr 0.0005 \
---epsilon 0.03 \
---warmup_epochs 0 \
---batch_size 512 \
+--epochs 100 \
+--base_lr 0.01 \
+--final_lr 0.00001 \
+--epsilon 0.05 \
+--warmup_epochs 10 \
+--start_warmup 0.3 \
+--batch_size 256 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
 --freeze_prototypes_niters 5005 \
---queue_length 4096 \
---epoch_queue_starts 12 \
+--queue_length 2048 \
+--epoch_queue_starts 30 \
 --nmb_prototypes 1500 \
 --checkpoint_freq 5 \
 --arch resnet34 \
