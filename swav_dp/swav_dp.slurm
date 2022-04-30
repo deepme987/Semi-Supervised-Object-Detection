@@ -16,8 +16,9 @@
 
 #SBATCH --partition=n1c24m128-v100-4
 #SBATCH --gres=gpu:4
-#SBATCH --cpus-per-task=24
 #SBATCH --mem-per-gpu=16G
+#SBATCH --cpus-per-task=24
+
 
 
 #SBATCH --time=24:00:00

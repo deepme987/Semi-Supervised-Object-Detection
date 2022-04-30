@@ -17,6 +17,7 @@
 #SBATCH --partition=n1c24m128-v100-4
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=24
+#SBATCH --mem-per-cpu=6G
 
 #SBATCH --time=24:00:00
 #SBATCH --output=swavdp_%j.out
