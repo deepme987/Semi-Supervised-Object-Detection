@@ -183,10 +183,10 @@ def get_model(num_classes, returned_layers=None):
     # ---------------------------------------------------------
     # Change backbone
     # ---------------------------------------------------------
-    # replace_bn(model.backbone.body, "backbone.body")
-    # model.backbone.body.load_state_dict(new_back_bone.state_dict())
-    model.backbone.body = new_back_bone
     replace_bn(model.backbone.body, "backbone.body")
+    model.backbone.body.load_state_dict(new_back_bone.state_dict())
+    # model.backbone.body = new_back_bone
+    # replace_bn(model.backbone.body, "backbone.body")
 
     for m in model.parameters():
         m.requires_grad = True
@@ -226,6 +226,7 @@ def get_model(num_classes, returned_layers=None):
         # print(model.backbone.body.layer4[0].bn1.running_mean)
         print("DONE")
         sys.stdout.flush()
+    # raise NotImplementedError
     return model
 
 def main():

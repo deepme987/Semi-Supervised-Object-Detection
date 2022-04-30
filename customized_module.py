@@ -141,16 +141,28 @@ class CustomizedBoxHeadCNN(nn.Module):
             self.build_layer(256, 256, (2, 2), (1, 1), padding=(1, 1)),
             self.build_layer(256, 1024, (1, 1), (1, 1)),
             
-            # nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            nn.GroupNorm(num_groups=32, num_channels=1024, eps=1e-05, momentum=0.1, affine=True)
+            # nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.GroupNorm(num_groups=32, num_channels=1024, eps=1e-05, affine=True),
+            nn.ReLU()
         )
-
+        self.shortcut = nn.Sequential(
+            self.build_layer(256, 1024, (1, 1), (2, 2)),
+            nn.GroupNorm(num_groups=32, num_channels=1024, eps=1e-05, affine=True),
+            nn.ReLU()
+        )
+        self.relu = nn.ReLU(inplace=True)
     def build_layer(self, in_channels, out_channels, kernel, stride, padding=None):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=kernel, stride=stride, bias=False),
-            # nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            nn.GroupNorm(num_groups=32, num_channels=out_channels, eps=1e-05, momentum=0.1, affine=True)
+            # nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.GroupNorm(num_groups=32, num_channels=out_channels, eps=1e-05, affine=True),
+            nn.ReLU()
+
         )
 
     def forward(self, x):
-        return self.layers(x)
+        y = self.shortcut(x)
+        x = self.layers(x)
+        out = y + x
+        out = self.relu(out)
+        return out
