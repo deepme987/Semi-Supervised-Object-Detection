@@ -48,7 +48,7 @@ python swav_dp.py \
 --epochs 100 \
 --base_lr 0.6 \
 --final_lr 0.0006 \
---epsilon 0.03 \
+--epsilon 0.025 \
 --warmup_epochs 0 \
 --batch_size 128 \
 --size_crops 224 96 \
@@ -61,5 +61,5 @@ python swav_dp.py \
 --nmb_prototypes 1500 \
 --checkpoint_freq 25 \
 --arch resnet50 \
---temperature 0.1
+--temperature 0.08
 "
