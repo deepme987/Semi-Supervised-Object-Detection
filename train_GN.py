@@ -88,6 +88,7 @@ def replace_bn(m, name):
                     eps=target_attr.eps, 
                     device=torch.device("cuda")
                 )
+                # nn.InstanceNorm2d(num_features=target_attr.num_features),
             )
     for n, ch in m.named_children():
         if isinstance(ch, nn.BatchNorm2d):
@@ -97,6 +98,7 @@ def replace_bn(m, name):
                 eps=m[1].eps, 
                 device=torch.device("cuda")
             )
+            # m[1] = nn.InstanceNorm2d(num_features=m[1].num_features)
         replace_bn(ch, n)
 
 

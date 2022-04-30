@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #########################
 parser.add_argument("--pretrained_hub", default=1, type=int,
                     help="if backbone downloaded from Facebook hub")
-parser.add_argument("--swav_file", type=str, default="./swav_results/swav_ckp.pth",
+parser.add_argument("--swav_file", type=str, default="./swav_results/swav_res18_ep48.pth",
                     help="path to swav checkpoints")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
