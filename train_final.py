@@ -299,7 +299,7 @@ def main():
                     param.running_var.fill_(1)
                     param.running_mean.zero_()
                 elif args.norm_layer == "BN":
-                    if "layer1" in name:
+                    if "layer1" in name or "backbone.body.bn" in name:
                         super_low_param.append(param)
                         super_low_name.append(name)
                     else:
