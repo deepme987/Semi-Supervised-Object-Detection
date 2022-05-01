@@ -77,7 +77,6 @@ parser.add_argument("--debug", default=0, type=int,
                     help="DEBUG architecture of model")
 parser.add_argument("--gcp_sucks", default=0, type=int,
                     help="you know the answer")
-        
 
 def get_transform(train):
     transforms = []
@@ -277,7 +276,8 @@ def main():
     
     model = get_model(num_classes)
     model.to(device)
-
+    if args.gcp_sucks == 1:
+        print(model)
     low_lr_param = []
     low_name = []
     high_lr_param = []
