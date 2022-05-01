@@ -299,8 +299,12 @@ def main():
                     param.running_var.fill_(1)
                     param.running_mean.zero_()
                 elif args.norm_layer == "BN":
-                    super_low_param.append(param)
-                    super_low_name.append(name)
+                    if "layer1" in name:
+                        super_low_param.append(param)
+                        super_low_name.append(name)
+                    else:
+                        low_lr_param.append(param)
+                        low_name.append(name)
                 else:
                     low_lr_param.append(param)
                     low_name.append(name)
@@ -324,11 +328,11 @@ def main():
          momentum=0.9,
          weight_decay=0.0005
     )
-    # print(f'{high_name=}')
-    # print(f'{low_name=}')
-    # print(f'{super_low_name=}')
-    # for param_group in optimizer.param_groups:
-    #     print(param_group['lr'])
+    print(f'{high_name=}')
+    print(f'{low_name=}')
+    print(f'{super_low_name=}')
+    for param_group in optimizer.param_groups:
+        print(param_group['lr'])
     # raise NotImplementedError
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
     # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
@@ -381,6 +385,6 @@ def main():
     # fuck GCP
     # with open(os.path.join(args.checkpoint_path, "eval_res.pickle"), "w") as outfile:
     #     pickle.dump(eval_result, outfile)
-
+    torch.save(model, "model_final.pth")
 if __name__ == "__main__":
     main()
