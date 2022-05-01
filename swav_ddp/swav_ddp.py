@@ -19,6 +19,7 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim
+import torch.multiprocessing as mp
 import apex
 from apex.parallel.LARC import LARC
 
@@ -90,7 +91,7 @@ parser.add_argument("--start_warmup", default=0, type=float,
 #########################
 #### dist parameters ###
 #########################
-parser.add_argument("--dist_url", default="tcp://127.0.0.1:52111", type=str, help="""url used to set up distributed
+parser.add_argument("--dist_url", default="tcp://127.0.0.1:FREEPORT", type=str, help="""url used to set up distributed
                     training; see https://pytorch.org/docs/stable/distributed.html""")
 parser.add_argument("--world_size", default=-1, type=int, help="""
                     number of processes: it is set automatically and
@@ -99,33 +100,98 @@ parser.add_argument("--rank", default=0, type=int, help="""rank of this process:
                     it is set automatically and should not be passed as argument""")
 parser.add_argument("--local_rank", default=0, type=int,
                     help="this argument is not used and should be ignored")
+parser.add_argument('--gpu', default=None, type=int,
+                    help='GPU id to use.')
 
 #########################
 #### other parameters ###
 #########################
-parser.add_argument("--arch", default="resnet18", type=str, help="convnet architecture")
+parser.add_argument("--arch", default="resnet50", type=str, help="convnet architecture")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--workers", default=2, type=int,
                     help="number of data loading workers")
-parser.add_argument("--checkpoint_freq", type=int, default=5,
+parser.add_argument("--checkpoint_freq", type=int, default=1,
                     help="Save the model periodically")
 parser.add_argument("--use_fp16", type=bool_flag, default=True,
                     help="whether to train with mixed precision or not")
 parser.add_argument("--sync_bn", type=str, default="pytorch", help="synchronize bn")
-parser.add_argument("--syncbn_process_group_size", type=int, default=2, help=""" see
+parser.add_argument("--syncbn_process_group_size", type=int, default=4, help=""" see
                     https://github.com/NVIDIA/apex/blob/master/apex/parallel/__init__.py#L58-L67""")
-parser.add_argument("--dump_path", type=str, default=".",
+parser.add_argument("--dump_path", type=str, default="./result",
                     help="experiment dump path for checkpoints and log")
 parser.add_argument("--seed", type=int, default=31, help="seed")
-
+parser.add_argument("--trial", type=int, default=-1, help="> 0 subset")
 
 def main():
     global args
     args = parser.parse_args()
-    init_distributed_mode(args)
+
     fix_random_seeds(args.seed)
+
+    if args.dist_url == "env://" and args.world_size == -1:
+        args.world_size = int(os.environ["WORLD_SIZE"])
+    ngpus_per_node = torch.cuda.device_count()
+    args.world_size = ngpus_per_node * args.world_size
+
+    mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+
+    return
+
+
+
+
+def main_worker(gpu, ngpus_per_node, args):
+    args.gpu = gpu
+    if args.gpu is not None:
+        print("Use GPU: {} for training".format(args.gpu))
+
+    # update the rank for each process, then initialize the logger
+    args.rank = args.rank * ngpus_per_node + gpu
+
     logger, training_stats = initialize_exp(args, "epoch", "loss")
+
+    dist.init_process_group(
+        backend="nccl",
+        init_method=args.dist_url,
+        world_size=args.world_size,
+        rank=args.rank,
+        timeout=timedelta(seconds=300)
+    )
+
+
+
+    # build model
+    model = resnet_models.__dict__[args.arch](
+        normalize=True,
+        hidden_mlp=args.hidden_mlp,
+        output_dim=args.feat_dim,
+        nmb_prototypes=args.nmb_prototypes,
+    )
+
+    # synchronize batch norm layers
+    if args.sync_bn == "pytorch":
+        model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    elif args.sync_bn == "apex":
+        # with apex syncbn we sync bn per group because it speeds up computation
+        # compared to global syncbn
+        process_group = apex.parallel.create_syncbn_process_group(args.syncbn_process_group_size)
+        model = apex.parallel.convert_syncbn_model(model, process_group=process_group)
+
+    # set cuda device
+    torch.cuda.set_device(args.gpu)
+    model.cuda(args.gpu)
+
+    # wrap model
+    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+
+    # model done
+    if args.rank == 0:
+        logger.info(model)
+    logger.info("Building model done.")
+
+
+
 
     # build data
     train_dataset = MultiCropDataset(
@@ -134,6 +200,7 @@ def main():
         args.nmb_crops,
         args.min_scale_crops,
         args.max_scale_crops,
+        args.trial
     )
     sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     train_loader = torch.utils.data.DataLoader(
@@ -146,26 +213,7 @@ def main():
     )
     logger.info("Building data done with {} images loaded.".format(len(train_dataset)))
 
-    # build model
-    model = resnet_models.__dict__[args.arch](
-        normalize=True,
-        hidden_mlp=args.hidden_mlp,
-        output_dim=args.feat_dim,
-        nmb_prototypes=args.nmb_prototypes,
-    )
-    # synchronize batch norm layers
-    if args.sync_bn == "pytorch":
-        model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    elif args.sync_bn == "apex":
-        # with apex syncbn we sync bn per group because it speeds up computation
-        # compared to global syncbn
-        process_group = apex.parallel.create_syncbn_process_group(args.syncbn_process_group_size)
-        model = apex.parallel.convert_syncbn_model(model, process_group=process_group)
-    # copy model to GPU
-    model = model.cuda()
-    if args.rank == 0:
-        logger.info(model)
-    logger.info("Building model done.")
+
 
     # build optimizer
     optimizer = torch.optim.SGD(
@@ -182,16 +230,13 @@ def main():
     lr_schedule = np.concatenate((warmup_lr_schedule, cosine_lr_schedule))
     logger.info("Building optimizer done.")
 
+
     # init mixed precision
     if args.use_fp16:
         model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1")
         logger.info("Initializing mixed precision done.")
 
-    # wrap model
-    model = nn.parallel.DistributedDataParallel(
-        model,
-        device_ids=[args.gpu_to_work_on]
-    )
+
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}

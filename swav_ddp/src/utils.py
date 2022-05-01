@@ -42,7 +42,7 @@ def init_distributed_mode(args):
     Initialize the following variables:
         - world_size
         - rank
-    """
+
 
     args.is_slurm_job = "SLURM_JOB_ID" in os.environ
 
@@ -80,7 +80,7 @@ def init_distributed_mode(args):
     torch.cuda.set_device(args.gpu_to_work_on)
     print ('args.gpu_to_work_on', args.gpu_to_work_on)
     return
-
+    """
 
 def initialize_exp(params, *args, dump_params=True):
     """
@@ -92,8 +92,10 @@ def initialize_exp(params, *args, dump_params=True):
     """
 
     # dump parameters
+    if not os.path.isdir(params.dump_path):
+        os.mkdir(params.dump_path)
     if dump_params:
-        pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb"))
+        pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb+"))
 
     # create repo to store checkpoints
     params.dump_checkpoints = os.path.join(params.dump_path, "checkpoints")
