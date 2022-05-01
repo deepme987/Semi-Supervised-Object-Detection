@@ -48,11 +48,11 @@ parser.add_argument("--checkpoint_freq", type=int, default=2,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
                     default='resnet18', type=str, help="Architecture")
-parser.add_argument("--high_lr", default=0.005, type=float,
+parser.add_argument("--high_lr", default=5e-3, type=float,
                     help="lr for rcnn")
-parser.add_argument("--low_lr", default=0.00005, type=float,
+parser.add_argument("--low_lr", default=5e-5, type=float,
                     help="lr for transfer layer in backbone")
-parser.add_argument("--super_low_lr", default=0.0000005, type=float,
+parser.add_argument("--super_low_lr", default=5e-7, type=float,
                     help="lr for first block in backbone")
 parser.add_argument("--sched_step", default=4, type=int,
                     help="Step size of lr scheduler")
