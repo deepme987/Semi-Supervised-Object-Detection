@@ -58,7 +58,7 @@ parser.add_argument("--sched_gamma", default=0.1, type=float,
                     help="lr scheduler")
 parser.add_argument("--norm_layer", choices=['FBN', 'GN', 'IN'],
                     default='FBN', type=str, help="Norm layer type.")
-parser.add_argument("--box_head", choices=['MLP', 'RES'],
+parser.add_argument("--box_head", choices=['mlp', 'res'],
                     default='MLP', type=str, help="box head type.")
 ##########################
 #### other parameters ####
@@ -201,16 +201,14 @@ def get_model(num_classes, returned_layers=None):
     # ---------------------------------------------------------
     # Change box_head
     # ---------------------------------------------------------
-    if args.box_head == "MLP":
+    if args.box_head == "mlp":
         out_channels = model.backbone.out_channels
         resolution = model.roi_heads.box_roi_pool.output_size[0]
         representation_size = 1024
         new_box_head = my_nn.CustomizedBoxHead(out_channels * resolution ** 2, representation_size)
-    elif args.box_head == "RES":
-        raise NotImplementedError
-        # new_box_head = my_nn.CustomizedBoxHeadCNNv2()
+    elif args.box_head == "res":
+        new_box_head = my_nn.ResBoxHead()
     model.roi_heads.box_head = new_box_head
-
 
     if args.debug == 1:
         for name, param in model.named_parameters():
@@ -226,7 +224,7 @@ def get_model(num_classes, returned_layers=None):
         print(model.backbone.body.layer4[0].bn1.weight)
         print("DONE")
         sys.stdout.flush()
-        raise NotImplementedError
+        # raise NotImplementedError
     return model
 
 def main():

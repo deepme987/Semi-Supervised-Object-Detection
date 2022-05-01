@@ -131,65 +131,52 @@ class FrozenBatchNorm2d(torch.nn.Module):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.weight.shape[0]}, eps={self.eps})"
 
+class MyBottleneck(nn.Module):
+    def __init__(self, in_planes, planes, stride=1, kernel_last=1, expan=4, short_cut=False):
+        super(MyBottleneck, self).__init__()
+        self.short_cut = short_cut
+        self.expansion = expan
+        self.conv1 = nn.Conv2d(in_planes, planes, stride=stride, kernel_size=1, bias=False)
+        self.norm1 = nn.GroupNorm(32, planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
+                               padding=1, bias=False)
+        self.norm2 = nn.GroupNorm(32, planes)
+        self.conv3 = nn.Conv2d(planes, self.expansion *
+                               planes, stride=1, kernel_size=kernel_last, bias=False)
+        self.norm3 = nn.GroupNorm(32, self.expansion*planes)
 
-class CustomizedBoxHeadCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layers = nn.Sequential(
-            self.build_layer(256, 512, (1, 1), (2, 2)),
-            self.build_layer(512, 256, (1, 1), (2, 2)),
-            self.build_layer(256, 256, (2, 2), (1, 1), padding=(1, 1)),
-            self.build_layer(256, 1024, (1, 1), (1, 1)),
-            
-            # nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-            nn.GroupNorm(num_groups=32, num_channels=1024, eps=1e-05, affine=True),
-            nn.ReLU()
-        )
-        self.shortcut = nn.Sequential(
-            self.build_layer(256, 1024, (1, 1), (2, 2)),
-            nn.GroupNorm(num_groups=32, num_channels=1024, eps=1e-05, affine=True),
-            nn.ReLU()
-        )
-        self.relu = nn.ReLU(inplace=True)
-    def build_layer(self, in_channels, out_channels, kernel, stride, padding=None):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=kernel, stride=stride, bias=False),
-            # nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-            nn.GroupNorm(num_groups=32, num_channels=out_channels, eps=1e-05, affine=True),
-            nn.ReLU()
-
-        )
+        if short_cut:
+            self.shortcut = nn.Sequential()
+            if stride != 1 or in_planes != self.expansion*planes:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion*planes,
+                            kernel_size=1, stride=stride, bias=False),
+                    nn.GroupNorm(32, self.expansion*planes)
+                )
 
     def forward(self, x):
-        y = self.shortcut(x)
-        x = self.layers(x)
-        out = y + x
-        out = self.relu(out)
+        out = F.relu(self.norm1(self.conv1(x)))
+        out = F.relu(self.norm2(self.conv2(out)))
+        out = self.norm3(self.conv3(out))
+        if self.short_cut:
+            out += self.shortcut(x)
+        out = F.relu(out)
         return out
 
-
-class CustomizedBoxHeadCNNv2(nn.Module):
+class ResBoxHead(nn.Module):
     def __init__(self):
-        super().__init__()
-        self.shortcut = self.build_layer(256, 1024, (1, 1), (3, 3))
-        self.layers = nn.Sequential(
-            self.build_layer(256, 128, (1, 1), (2, 2)),
-            self.build_layer(128, 128, (2, 2), (1, 1), padding=(1, 1)),
-            self.build_layer(128, 1024, (1, 1), (1, 1)),
+        super(ResBoxHead, self).__init__()
+        self.in_planes = 256
 
-            self.build_layer(1024, 128, (1, 1), (2, 2)),
-            self.build_layer(128, 128, (2, 2), (1, 1), padding=(1, 1)),
-            self.build_layer(128, 1024, (1, 1), (1, 1)),
-
-            nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        )
-
-    def build_layer(self, in_channels, out_channels, kernel, stride, padding=None):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=kernel, stride=stride, bias=False),
-            nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        )
+        self.layer1 = MyBottleneck(self.in_planes, 128, 2, expan=4, short_cut=True)
+        self.layer2 = MyBottleneck(512, 128, 2, expan=4)
+        self.layer3 = MyBottleneck(512, 128, 1, expan=8, kernel_last=2)
+        self.norm = nn.GroupNorm(32, 1024)
 
     def forward(self, x):
-        x = self.layers(x)
-        return x
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.norm(out)
+        out = out.view(out.size(0), -1)
+        return out
