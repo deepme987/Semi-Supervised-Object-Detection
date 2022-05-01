@@ -8,15 +8,15 @@
 ##SBATCH --gres=gpu:1
 ##SBATCH --cpus-per-task=8
 
-#SBATCH --partition=n1s16-v100-2
-#SBATCH --gres=gpu:2
-#SBATCH --tasks-per-node=2
-#SBATCH --cpus-per-task=8
+##SBATCH --partition=n1s16-v100-2
+##SBATCH --gres=gpu:2
+##SBATCH --tasks-per-node=2
+##SBATCH --cpus-per-task=8
 
 
-##SBATCH --partition=n1c24m128-v100-4
-##SBATCH --gres=gpu:4
-##SBATCH --cpus-per-task=24
+#SBATCH --partition=n1c24m128-v100-4
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=24
 
 
 #SBATCH --time=24:00:00
@@ -33,13 +33,13 @@ cp -rp /scratch/DL22SP/labeled.sqsh /tmp
 echo "Dataset is copied to /tmp"
 echo $SLURMD_NODENAME $SLURM_JOB_ID $CUDA_VISIBLE_DEVICES
 
-export MASTER_ADDR=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
-export MASTER_PORT=50000
+##export MASTER_ADDR=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
+##export MASTER_PORT=50000
 
-master_node=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
-dist_url="tcp://"
-dist_url+=$master_node
-dist_url+=:50000
+##master_node=${SLURM_NODELIST:0:9}${SLURM_NODELIST:10:4}
+##dist_url="tcp://"
+##dist_url+=$master_node
+##dist_url+=:50000
 
 singularity exec --nv \
 --bind /scratch \
@@ -52,9 +52,9 @@ source /ext3/env.sh
 conda activate
 python swav_ddp.py \
 --workers 2 \
---epochs 20 \
---base_lr 0.3 \
---final_lr 0.001 \
+--epochs 100 \
+--base_lr 0.6 \
+--final_lr 0.0006 \
 --warmup_epochs 0 \
 --batch_size 128 \
 --size_crops 224 96 \
@@ -64,6 +64,5 @@ python swav_ddp.py \
 --use_fp16 true \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
---sync_bn pytorch \
---dist_url $dist_url
+--sync_bn pytorch
 "

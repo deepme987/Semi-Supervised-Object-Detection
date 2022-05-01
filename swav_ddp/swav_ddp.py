@@ -68,7 +68,7 @@ parser.add_argument("--nmb_prototypes", default=3000, type=int,
                     help="number of prototypes")
 parser.add_argument("--queue_length", type=int, default=0,
                     help="length of the queue (0 for no queue)")
-parser.add_argument("--epoch_queue_starts", type=int, default=15,
+parser.add_argument("--epoch_queue_starts", type=int, default=12,
                     help="from this epoch, we start using a queue")
 
 #########################
@@ -90,7 +90,7 @@ parser.add_argument("--start_warmup", default=0, type=float,
 #########################
 #### dist parameters ###
 #########################
-parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up distributed
+parser.add_argument("--dist_url", default="tcp://127.0.0.1:52111", type=str, help="""url used to set up distributed
                     training; see https://pytorch.org/docs/stable/distributed.html""")
 parser.add_argument("--world_size", default=-1, type=int, help="""
                     number of processes: it is set automatically and
@@ -108,7 +108,7 @@ parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--workers", default=2, type=int,
                     help="number of data loading workers")
-parser.add_argument("--checkpoint_freq", type=int, default=25,
+parser.add_argument("--checkpoint_freq", type=int, default=5,
                     help="Save the model periodically")
 parser.add_argument("--use_fp16", type=bool_flag, default=True,
                     help="whether to train with mixed precision or not")
