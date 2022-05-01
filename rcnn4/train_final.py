@@ -40,26 +40,28 @@ parser.add_argument("--nmb_prototypes", default=1000, type=int,
 #############################
 parser.add_argument("--mode", choices=['train', 'eval', 'resume'], 
                     default='train', type=str, help="Choose action.") #TODO: add resume impl
-parser.add_argument("--epochs", default=30, type=int,
+parser.add_argument("--epochs", default=25, type=int,
                     help="number of total epochs to run")
-parser.add_argument("--eval_freq", default=5, type=int,
+parser.add_argument("--eval_freq", default=2, type=int,
                     help="Eval the model periodically")
-parser.add_argument("--checkpoint_freq", type=int, default=3,
+parser.add_argument("--checkpoint_freq", type=int, default=2,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
                     default='resnet18', type=str, help="Architecture")
 parser.add_argument("--high_lr", default=0.005, type=float,
+                    help="lr for rcnn")
+parser.add_argument("--low_lr", default=0.00005, type=float,
+                    help="lr for transfer layer in backbone")
+parser.add_argument("--super_low_lr", default=0.0000005, type=float,
+                    help="lr for first block in backbone")
+parser.add_argument("--sched_step", default=4, type=int,
                     help="Step size of lr scheduler")
-parser.add_argument("--low_lr", default=0.0001, type=float,
-                    help="Step size of lr scheduler")
-parser.add_argument("--sched_step", default=5, type=int,
-                    help="Step size of lr scheduler")
-parser.add_argument("--sched_gamma", default=0.1, type=float,
+parser.add_argument("--sched_gamma", default=0.2, type=float,
                     help="lr scheduler")
 parser.add_argument("--norm_layer", choices=['FBN', 'GN', 'IN', 'BN'],
                     default='FBN', type=str, help="Norm layer type.")
 parser.add_argument("--box_head", choices=['mlp', 'res'],
-                    default='MLP', type=str, help="box head type.")
+                    default='mlp', type=str, help="box head type.")
 ##########################
 #### other parameters ####
 ##########################
@@ -75,7 +77,7 @@ parser.add_argument("--checkpoint_file", type=str, default="",
 
 parser.add_argument("--debug", default=0, type=int,
                     help="DEBUG architecture of model")
-parser.add_argument("--gcp_sucks", default=0, type=int,
+parser.add_argument("--gcp_sucks", default=1, type=int,
                     help="you know the answer")
 
 def get_transform(train):
@@ -238,6 +240,8 @@ def main():
     if args.debug == 1:
         args.eval_freq = 420
         args.checkpoint_freq = 420
+        args.epochs = 30
+        args.sched_step = 10
 
     print('--------------------Args--------------------')
     print(' '.join(f'{k}={v}\n' for k, v in vars(args).items()))
@@ -291,33 +295,43 @@ def main():
         if "backbone.body" in name:
             if "bn" in name:
                 if args.norm_layer == "FBN":
+                    print(f'reset running stats for {name}')
                     param.running_var.fill_(1)
                     param.running_mean.zero_()
                 elif args.norm_layer == "BN":
                     super_low_param.append(param)
                     super_low_name.append(name)
                 else:
-                    high_lr_param.append(param)
-                    high_name.append(name)
+                    low_lr_param.append(param)
+                    low_name.append(name)
+            elif "layer1" in name or "backbone.body.conv1" in name:
+                super_low_param.append(param)
+                super_low_name.append(name)
             else:
                 low_lr_param.append(param)
                 low_name.append(name)
         else:
             high_lr_param.append(param)
             high_name.append(name)
+
     optimizer = torch.optim.SGD(
          [
             {"params": high_lr_param},
             {"params": low_lr_param, "lr": args.low_lr},
-            {"params": super_low_param, "lr": (args.low_lr / 2)}
+            {"params": super_low_param, "lr": args.super_low_lr},
          ],
          lr=args.high_lr,
          momentum=0.9,
          weight_decay=0.0005
     )
-
-    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
+    # print(f'{high_name=}')
+    # print(f'{low_name=}')
+    # print(f'{super_low_name=}')
+    # for param_group in optimizer.param_groups:
+    #     print(param_group['lr'])
+    # raise NotImplementedError
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
     if args.mode == 'resume':
