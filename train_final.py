@@ -56,7 +56,7 @@ parser.add_argument("--sched_step", default=5, type=int,
                     help="Step size of lr scheduler")
 parser.add_argument("--sched_gamma", default=0.1, type=float,
                     help="lr scheduler")
-parser.add_argument("--norm_layer", choices=['FBN', 'GN', 'IN'],
+parser.add_argument("--norm_layer", choices=['FBN', 'GN', 'IN', 'BN'],
                     default='FBN', type=str, help="Norm layer type.")
 parser.add_argument("--box_head", choices=['mlp', 'res'],
                     default='MLP', type=str, help="box head type.")
@@ -179,6 +179,9 @@ def get_model(num_classes, returned_layers=None):
         build_model.replace_bn_GN(model.backbone.body, "backbone.body")
     elif args.norm_layer == "IN":
         build_model.replace_bn_IN(model.backbone.body, "backbone.body")
+    elif args.norm_layer == "BN":
+        # build_model.replace_bn_IN(model.backbone.body, "backbone.body")
+        pass
     else:
         print("WARNING: Norm Layer not replaced")
 
@@ -223,7 +226,6 @@ def get_model(num_classes, returned_layers=None):
         print(model.backbone.body.layer4[0].bn1.weight)
         print("DONE")
         sys.stdout.flush()
-        # raise NotImplementedError
     return model
 
 def main():
@@ -278,6 +280,9 @@ def main():
     model.to(device)
     if args.gcp_sucks == 1:
         print(model)
+
+    super_low_param = []
+    super_low_name = []
     low_lr_param = []
     low_name = []
     high_lr_param = []
@@ -288,6 +293,9 @@ def main():
                 if args.norm_layer == "FBN":
                     param.running_var.fill_(1)
                     param.running_mean.zero_()
+                elif args.norm_layer == "BN":
+                    super_low_param.append(param)
+                    super_low_name.append(name)
                 else:
                     high_lr_param.append(param)
                     high_name.append(name)
@@ -297,11 +305,11 @@ def main():
         else:
             high_lr_param.append(param)
             high_name.append(name)
-
     optimizer = torch.optim.SGD(
          [
             {"params": high_lr_param},
-            {"params": low_lr_param, "lr": args.low_lr} 
+            {"params": low_lr_param, "lr": args.low_lr},
+            {"params": super_low_param, "lr": (args.low_lr / 2)}
          ],
          lr=args.high_lr,
          momentum=0.9,
@@ -309,7 +317,7 @@ def main():
     )
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
-
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
     if args.mode == 'resume':
