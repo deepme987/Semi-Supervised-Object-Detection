@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #### swav parameters ####
 #########################
 
-parser.add_argument("--swav_file", type=str, default="swav_res18_ep72.pth",
+parser.add_argument("--swav_file", type=str, default="swav_res18_ep84.pth",
                     help="path to swav checkpoints")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
@@ -183,13 +183,13 @@ def get_model(num_classes, returned_layers=None):
 
     model.roi_heads.box_head = new_box_head
 
-    if args.debug == 1:
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(f'TRAIN: {name}')
-            else:
-                print(f'FROZEN: {name}')
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f'TRAIN: {name}')
+        else:
+            print(f'FROZEN: {name}')
 
+    if args.debug == 1:
         for name, child in model.named_children():
             print(f'name is: {name}')
             print(f'module is: {child}')
@@ -197,7 +197,7 @@ def get_model(num_classes, returned_layers=None):
         print(model.backbone.body.layer4[0].bn1.weight)
         print("DONE")
         sys.stdout.flush()
-    # raise NotImplementedError
+
     return model
 
 def main():
@@ -245,7 +245,7 @@ def main():
     if args.debug == 1:
         index = list(range(10))
         train_dataset = torch.utils.data.Subset(train_dataset, index)
-        valid_dataset = torch.utils.data.Subset(valid_dataset, index)
+        # valid_dataset = torch.utils.data.Subset(valid_dataset, index)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=2, collate_fn=utils.collate_fn)
@@ -262,12 +262,11 @@ def main():
     high_lr_param = []
     high_name = []
 
-    for name, m in model.named_modules():
-        if "backbone.body" in name:
-            if "bn" in name or "backbone.body.bn" in name:
-                print(f'reset running stats for {name}')
-                m.running_var.fill_(1)
-                m.running_mean.zero_()
+    # for name, m in model.named_modules():
+    #     if "backbone.body" in name:
+    #         if "bn" in name or "backbone.body.bn" in name:
+    #             m.running_var.fill_(1)
+    #             m.running_mean.zero_()
 
     for name, param in model.named_parameters():
         if "backbone.body" in name:
@@ -280,6 +279,7 @@ def main():
         else:
             high_lr_param.append(param)
             high_name.append(name)
+
 
     optimizer = torch.optim.SGD(
          [
@@ -296,11 +296,11 @@ def main():
     print(f'{super_low_name=}')
     for param_group in optimizer.param_groups:
         print(param_group['lr'])
-
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.sched_step, gamma=args.sched_gamma)
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
     if args.mode == 'resume':
+        print("Restart from checkpoint")
         utils.restart_from_checkpoint(
             os.path.join(args.checkpoint_path, "checkpoint.pth.tar"),
             run_variables=to_restore,
