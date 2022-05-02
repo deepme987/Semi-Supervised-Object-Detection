@@ -36,5 +36,5 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python train_submission.py --epochs 30 --data_path /labeled --gcp_sucks 1 --eval_freq 2 --checkpoint_freq 2 --arch resnet18 --sched_step 3 --swav_file swav_res18_ep72.pth
+python train_submission.py --epochs 30 --data_path /labeled --gcp_sucks 1 --eval_freq 2 --checkpoint_freq 2 --swav_file swav_res18_ep81.pth
 "
