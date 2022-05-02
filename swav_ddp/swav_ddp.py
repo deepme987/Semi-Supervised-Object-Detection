@@ -274,7 +274,7 @@ def main_worker(gpu, ngpus_per_node, args):
             ).cuda()
 
         # train the network
-        scores, queue = train(train_loader, model, optimizer, epoch, lr_schedule, queue)
+        scores, queue = train(train_loader, model, optimizer, epoch, lr_schedule, queue, args)
         training_stats.update(scores)
 
         # save checkpoints
@@ -299,7 +299,7 @@ def main_worker(gpu, ngpus_per_node, args):
             torch.save({"queue": queue}, queue_path)
 
 
-def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
+def train(train_loader, model, optimizer, epoch, lr_schedule, queue, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -347,7 +347,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
                     queue[i, :bs] = embedding[crop_id * bs: (crop_id + 1) * bs]
 
                 # get assignments
-                q = distributed_sinkhorn(out)[-bs:]
+                q = distributed_sinkhorn(out,args)[-bs:]
 
             # cluster assignment prediction
             subloss = 0
@@ -394,7 +394,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 
 
 @torch.no_grad()
-def distributed_sinkhorn(out):
+def distributed_sinkhorn(out, args):
     Q = torch.exp(out / args.epsilon).t() # Q is K-by-B for consistency with notations from our paper
     B = Q.shape[1] * args.world_size # number of samples to assign
     K = Q.shape[0] # how many prototypes
