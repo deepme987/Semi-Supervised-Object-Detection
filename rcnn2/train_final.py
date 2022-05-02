@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #########################
 parser.add_argument("--pretrained_hub", default=0, type=int,
                     help="if backbone downloaded from Facebook hub")
-parser.add_argument("--swav_file", type=str, default="swav_res18_ep69.pth",
+parser.add_argument("--swav_file", type=str, default="swav_res18_ep84.pth",
                     help="path to swav checkpoints")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
@@ -284,7 +284,14 @@ def main():
     model.to(device)
     if args.gcp_sucks == 1:
         print(model)
-
+    for name, m in model.named_modules():
+        if "backbone.body" in name:
+            if "bn" in name or "backbone.body.bn" in name:
+                print(f'reset running stats for {name}')
+                
+                m.running_var.fill_(1)
+                m.running_mean.zero_()
+                
     super_low_param = []
     super_low_name = []
     low_lr_param = []
