@@ -33,6 +33,9 @@ from src.utils import (
 )
 from src.multicropdataset import MultiCropDataset
 import src.resnet50 as resnet_models
+import warnings
+
+warnings.filterwarnings("ignore")
 
 logger = getLogger()
 
@@ -91,7 +94,7 @@ parser.add_argument("--start_warmup", default=0, type=float,
 #########################
 #### dist parameters ###
 #########################
-parser.add_argument("--dist_url", default="tcp://127.0.0.1:FREEPORT", type=str, help="""url used to set up distributed
+parser.add_argument("--dist_url", default="tcp://127.0.0.1:50000", type=str, help="""url used to set up distributed
                     training; see https://pytorch.org/docs/stable/distributed.html""")
 parser.add_argument("--world_size", default=-1, type=int, help="""
                     number of processes: it is set automatically and
@@ -182,9 +185,6 @@ def main_worker(gpu, ngpus_per_node, args):
     torch.cuda.set_device(args.gpu)
     model.cuda(args.gpu)
 
-    # wrap model
-    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-
     # model done
     if args.rank == 0:
         logger.info(model)
@@ -236,7 +236,8 @@ def main_worker(gpu, ngpus_per_node, args):
         model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1")
         logger.info("Initializing mixed precision done.")
 
-
+    # wrap model
+    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
@@ -276,7 +277,7 @@ def main_worker(gpu, ngpus_per_node, args):
             ).cuda()
 
         # train the network
-        scores, queue = train(train_loader, model, optimizer, epoch, lr_schedule, queue)
+        scores, queue = train(train_loader, model, optimizer, epoch, lr_schedule, queue, args)
         training_stats.update(scores)
 
         # save checkpoints
@@ -301,7 +302,7 @@ def main_worker(gpu, ngpus_per_node, args):
             torch.save({"queue": queue}, queue_path)
 
 
-def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
+def train(train_loader, model, optimizer, epoch, lr_schedule, queue, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -349,7 +350,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
                     queue[i, :bs] = embedding[crop_id * bs: (crop_id + 1) * bs]
 
                 # get assignments
-                q = distributed_sinkhorn(out)[-bs:]
+                q = distributed_sinkhorn(out,args)[-bs:]
 
             # cluster assignment prediction
             subloss = 0
@@ -396,7 +397,7 @@ def train(train_loader, model, optimizer, epoch, lr_schedule, queue):
 
 
 @torch.no_grad()
-def distributed_sinkhorn(out):
+def distributed_sinkhorn(out, args):
     Q = torch.exp(out / args.epsilon).t() # Q is K-by-B for consistency with notations from our paper
     B = Q.shape[1] * args.world_size # number of samples to assign
     K = Q.shape[0] # how many prototypes

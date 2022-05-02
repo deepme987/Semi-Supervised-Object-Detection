@@ -53,8 +53,8 @@ conda activate
 python -u swav_ddp.py \
 --workers 2 \
 --epochs 100 \
---batch_size 128 \
---epsilon 0.03 \
+--batch_size 32 \
+--epsilon 0.05 \
 --base_lr 0.6 \
 --final_lr 0.0006 \
 --warmup_epochs 0 \
@@ -66,11 +66,10 @@ python -u swav_ddp.py \
 --freeze_prototypes_niters 5005 \
 --queue_length 3072 \
 --nmb_prototypes 2000 \
---epoch_queue_starts 12 \
+--epoch_queue_starts 30 \
 --sync_bn pytorch \
 --syncbn_process_group_size 4 \
 --world_size 1 \
 --rank 0 \
---arch resnet34 \
---trial 1024
+--arch resnet50
 "

@@ -33,7 +33,9 @@ from src.utils import (
 )
 from src.multicropdataset import MultiCropDataset
 import src.resnet50 as resnet_models
+import warnings
 
+warnings.filterwarnings("ignore")
 logger = getLogger()
 
 parser = argparse.ArgumentParser(description="Implementation of SwAV")
