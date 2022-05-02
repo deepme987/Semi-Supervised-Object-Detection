@@ -26,7 +26,7 @@ mkdir /tmp/$USER
 export SINGULARITY_CACHEDIR=/tmp/$USER
 
 cp -rp /scratch/DL22SP/labeled.sqsh /tmp
-echo "Dataset is copied to /tmp aha"
+echo "Dataset is copied to /tmp"
 
 singularity exec --nv \
 --bind /scratch \
@@ -36,5 +36,5 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python train_final.py --box_head mlp --epochs 25 --data_path /labeled --gcp_sucks 1 --pretrained_hub 0 --eval_freq 2 --checkpoint_freq 2 --arch resnet18 --high_lr 0.005 --sched_step 4 --norm_layer FBN --swav_file swav_res18_ep72.pth
+python train_submission.py --high_lr 1e-3 --low_lr 5e-5 --super_low_lr 1e-6 --epochs 30 --data_path /labeled --gcp_sucks 1 --eval_freq 2 --checkpoint_freq 2 --arch resnet18 --sched_step 4 --swav_file swav_res18_ep72.pth
 "
