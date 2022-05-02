@@ -182,9 +182,6 @@ def main_worker(gpu, ngpus_per_node, args):
     torch.cuda.set_device(args.gpu)
     model.cuda(args.gpu)
 
-    # wrap model
-    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-
     # model done
     if args.rank == 0:
         logger.info(model)
@@ -236,7 +233,8 @@ def main_worker(gpu, ngpus_per_node, args):
         model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O1")
         logger.info("Initializing mixed precision done.")
 
-
+    # wrap model
+    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
 
     # optionally resume from a checkpoint
     to_restore = {"epoch": 0}
