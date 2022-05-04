@@ -86,7 +86,7 @@ parser.add_argument("--base_lr", default=4.8, type=float, help="base learning ra
 parser.add_argument("--final_lr", type=float, default=0, help="final learning rate")
 parser.add_argument("--freeze_prototypes_niters", default=313, type=int,
                     help="freeze the prototypes during this many iterations from the start")
-parser.add_argument("--wd", default=1e-4, type=float, help="weight decay")
+parser.add_argument("--wd", default=1e-6, type=float, help="weight decay")
 parser.add_argument("--warmup_epochs", default=10, type=int, help="number of warmup epochs")
 parser.add_argument("--start_warmup", default=0, type=float,
                     help="initial warmup learning rate")
@@ -114,7 +114,7 @@ parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--workers", default=2, type=int,
                     help="number of data loading workers")
-parser.add_argument("--checkpoint_freq", type=int, default=1,
+parser.add_argument("--checkpoint_freq", type=int, default=25,
                     help="Save the model periodically")
 parser.add_argument("--use_fp16", type=bool_flag, default=True,
                     help="whether to train with mixed precision or not")

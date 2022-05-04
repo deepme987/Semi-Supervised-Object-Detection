@@ -52,25 +52,24 @@ source /ext3/env.sh
 conda activate
 python -u swav_ddp.py \
 --workers 2 \
---epochs 100 \
+--epochs 400 \
 --batch_size 64 \
 --epsilon 0.05 \
 --base_lr 0.6 \
 --final_lr 0.0006 \
---warmup_epochs 0 \
+--warmup_epochs 10 \
 --size_crops 224 96 \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
---use_fp16 true \
+--use_fp16 True \
 --freeze_prototypes_niters 5005 \
---queue_length 3072 \
---nmb_prototypes 2000 \
---epoch_queue_starts 12 \
+--queue_length 3840 \
+--nmb_prototypes 3000 \
+--epoch_queue_starts 15 \
 --sync_bn pytorch \
 --syncbn_process_group_size 4 \
 --world_size 1 \
 --rank 0 \
---arch resnet50 \
---trial 1024
+--arch resnet50
 "
