@@ -62,7 +62,7 @@ python -u swav_ddp.py \
 --nmb_crops 2 6 \
 --min_scale_crops 0.14 0.05 \
 --max_scale_crops 1. 0.14 \
---use_fp16 False \
+--use_fp16 True \
 --freeze_prototypes_niters 5005 \
 --queue_length 3072 \
 --nmb_prototypes 2000 \
