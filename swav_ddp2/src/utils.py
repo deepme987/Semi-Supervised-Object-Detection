@@ -94,7 +94,7 @@ def initialize_exp(params, *args, dump_params=True):
     # dump parameters
     if not params.rank and not os.path.isdir(params.dump_path):
         os.mkdir(params.dump_path)
-    if dump_params:
+    if not params.rank and dump_params:
         pickle.dump(params, open(os.path.join(params.dump_path, "params.pkl"), "wb+"))
 
     # create repo to store checkpoints
