@@ -72,5 +72,5 @@ python -u swav_ddp.py \
 --world_size 1 \
 --rank 0 \
 --arch resnet50 \
---checkpoint_freq 10
+--checkpoint_freq 15
 "

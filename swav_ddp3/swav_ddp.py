@@ -112,7 +112,7 @@ parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--workers", default=2, type=int,
                     help="number of data loading workers")
-parser.add_argument("--checkpoint_freq", type=int, default=1,
+parser.add_argument("--checkpoint_freq", type=int, default=15,
                     help="Save the model periodically")
 parser.add_argument("--use_fp16", type=bool_flag, default=True,
                     help="whether to train with mixed precision or not")

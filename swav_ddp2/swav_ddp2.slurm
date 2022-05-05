@@ -66,7 +66,7 @@ python -u swav_ddp.py \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
 --nmb_prototypes 3000 \
---epoch_queue_starts 15 \
+--epoch_queue_starts 30 \
 --sync_bn pytorch \
 --syncbn_process_group_size 4 \
 --world_size 1 \
