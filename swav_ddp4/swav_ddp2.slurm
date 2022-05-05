@@ -52,7 +52,7 @@ source /ext3/env.sh
 conda activate
 python -u swav_ddp.py \
 --workers 2 \
---epochs 100 \
+--epochs 400 \
 --batch_size 64 \
 --epsilon 0.05 \
 --base_lr 0.6 \
@@ -66,10 +66,10 @@ python -u swav_ddp.py \
 --freeze_prototypes_niters 5005 \
 --queue_length 3840 \
 --nmb_prototypes 3000 \
---epoch_queue_starts 30 \
+--epoch_queue_starts 15 \
 --sync_bn pytorch \
 --syncbn_process_group_size 4 \
 --world_size 1 \
 --rank 0 \
---arch resnet34
+--arch resnet50
 "
