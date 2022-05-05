@@ -52,8 +52,8 @@ source /ext3/env.sh
 conda activate
 python -u swav_ddp.py \
 --workers 2 \
---epochs 400 \
---batch_size 64 \
+--epochs 75 \
+--batch_size 32 \
 --epsilon 0.05 \
 --base_lr 0.6 \
 --final_lr 0.0006 \
@@ -71,5 +71,6 @@ python -u swav_ddp.py \
 --syncbn_process_group_size 4 \
 --world_size 1 \
 --rank 0 \
---arch resnet50
+--arch resnet50 \
+--checkpoint_freq 10
 "
