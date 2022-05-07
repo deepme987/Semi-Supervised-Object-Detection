@@ -26,13 +26,13 @@ parser = argparse.ArgumentParser(description="Evaluate models: Fine-tuning with 
 #########################
 parser.add_argument("--pretrained_hub", default=0, type=int,
                     help="if backbone downloaded from Facebook hub")
-parser.add_argument("--swav_file", type=str, default="swav_res18_ep69.pth",
+parser.add_argument("--swav_file", type=str, default="swav_res50_ep100.pth",
                     help="path to swav checkpoints")
 parser.add_argument("--hidden_mlp", default=2048, type=int,
                     help="hidden layer dimension in projection head")
 parser.add_argument("--feat_dim", default=128, type=int,
                     help="feature dimension")
-parser.add_argument("--nmb_prototypes", default=1000, type=int,
+parser.add_argument("--nmb_prototypes", default=2000, type=int,
                     help="number of prototypes")
 
 #############################
@@ -40,14 +40,14 @@ parser.add_argument("--nmb_prototypes", default=1000, type=int,
 #############################
 parser.add_argument("--mode", choices=['train', 'eval', 'resume'], 
                     default='train', type=str, help="Choose action.") #TODO: add resume impl
-parser.add_argument("--epochs", default=25, type=int,
+parser.add_argument("--epochs", default=40, type=int,
                     help="number of total epochs to run")
 parser.add_argument("--eval_freq", default=2, type=int,
                     help="Eval the model periodically")
 parser.add_argument("--checkpoint_freq", type=int, default=2,
                     help="Save the model periodically")
 parser.add_argument("--arch", choices=['resnet50', 'resnet18', 'resnet34'],
-                    default='resnet18', type=str, help="Architecture")
+                    default='resnet50', type=str, help="Architecture")
 parser.add_argument("--high_lr", default=5e-3, type=float,
                     help="lr for rcnn")
 parser.add_argument("--low_lr", default=5e-5, type=float,
@@ -295,9 +295,10 @@ def main():
         if "backbone.body" in name:
             if "bn" in name:
                 if args.norm_layer == "FBN":
-                    print(f'reset running stats for {name}')
-                    param.running_var.fill_(1)
-                    param.running_mean.zero_()
+                    pass
+                    # print(f'reset running stats for {name}')
+                    # param.running_var.fill_(1)
+                    # param.running_mean.zero_()
                 elif args.norm_layer == "BN":
                     if "layer1" in name or "backbone.body.bn" in name:
                         super_low_param.append(param)
@@ -353,7 +354,7 @@ def main():
     if (args.mode == "train") or (args.mode == "resume"):
         for epoch in range(start_epoch, args.epochs):
             # train for one epoch, printing every 10 iterations
-            train_log, smooth_loss_hist = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=1000)
+            train_log, smooth_loss_hist = train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=5000)
             
             if args.gcp_sucks == 0:
                 training_stats_detailed.update(train_log)
@@ -372,15 +373,18 @@ def main():
             # update the learning rate
             lr_scheduler.step()
 
+
             if args.debug == 0:
                 # save whole model instead of state_dict
-                if (((epoch + 1) % args.eval_freq == 0 and (epoch > 0)) or (epoch == args.epochs - 1)):
+                if (((epoch + 1) % args.checkpoint_freq == 0 and (epoch > 0)) or (epoch == args.epochs - 1)):
                     torch.save(model, os.path.join(args.checkpoint_path, f"model_{epoch}.pth"))
 
-                if (((epoch + 1) % args.eval_freq == 0 and (epoch > 0)) or (epoch == args.epochs - 1)):
+                if (((((epoch + 1) % args.eval_freq) == 0) and (epoch > 0)) or (epoch == args.epochs - 1)):
                     # evaluate on the test dataset
                     coco_res, _ = evaluate(model, valid_loader, device=device)
+                    # print(f'coco_res: {coco_res.coco_eval["bbox"].stats}')
                     eval_result[epoch] = coco_res.coco_eval
+                    
 
     # fuck GCP
     # with open(os.path.join(args.checkpoint_path, "eval_res.pickle"), "w") as outfile:

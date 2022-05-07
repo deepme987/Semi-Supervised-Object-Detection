@@ -16,7 +16,7 @@
 ##SBATCH --gres=gpu:4
 ##SBATCH --cpus-per-task=24
 
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --output=rcnn_%j.out
 #SBATCH --error=rcnn_%j.err
 #SBATCH --exclusive
@@ -36,5 +36,5 @@ singularity exec --nv \
 /bin/bash -c "
 source /ext3/env.sh
 conda activate
-python train_submission.py --epochs 30 --data_path /labeled --gcp_sucks 1 --eval_freq 2 --checkpoint_freq 2 --sched_step 3 --swav_file swav_res18_ep84.pth
+python train_final.py --epochs 40 --data_path /labeled --gcp_sucks 1 --eval_freq 1 --checkpoint_freq 2 --swav_file swav_res50_ep100.pth --arch resnet50 --box_head mlp --norm_palyer FBN
 "
