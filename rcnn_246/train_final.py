@@ -54,7 +54,7 @@ parser.add_argument("--low_lr", default=5e-5, type=float,
                     help="lr for transfer layer in backbone")
 parser.add_argument("--super_low_lr", default=5e-7, type=float,
                     help="lr for first block in backbone")
-parser.add_argument("--sched_step", default=4, type=int,
+parser.add_argument("--sched_step", default=6, type=int,
                     help="Step size of lr scheduler")
 parser.add_argument("--sched_gamma", default=0.2, type=float,
                     help="lr scheduler")
